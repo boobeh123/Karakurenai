@@ -1,0 +1,145 @@
+/**************************************************************
+Base
+***************************************************************/
+:root {
+  --colorCream: #fbf4e4;
+  --colorCreamVeil: rgba(251, 244, 228, 0.88);
+  --colorPaper: #f3e7cc;
+  --colorInk: #2b1d16;
+  --colorInkSoft: rgba(43, 29, 22, 0.55);
+  --colorCrimson: #b3122e;
+
+  --fontBody: 'Shippori Mincho', 'Yu Mincho', serif;
+  --fontBrush: 'Yuji Syuku', 'Yu Mincho', serif;
+
+  --fontSizeSm: 0.8rem;
+  --fontSizeMd: 0.95rem;
+
+  --spaceXs: 0.35rem;
+  --spaceSm: 0.5rem;
+  --spaceMd: 1rem;
+  --spaceLg: 1.25rem;
+
+  --radiusPill: 999px;
+  --radiusCard: 0.75rem;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background-color: var(--colorPaper);
+  color: var(--colorInk);
+  font-family: var(--fontBody);
+}
+
+/**************************************************************
+Utilities
+***************************************************************/
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/**************************************************************
+Components
+***************************************************************/
+.motionToggle {
+  position: fixed;
+  right: var(--spaceMd);
+  bottom: var(--spaceMd);
+  padding: var(--spaceSm) var(--spaceLg);
+  font-family: var(--fontBody);
+  font-size: var(--fontSizeMd);
+  font-weight: 600;
+  color: var(--colorInk);
+  background-color: var(--colorCreamVeil);
+  border: 1px solid var(--colorInkSoft);
+  border-radius: var(--radiusPill);
+  cursor: pointer;
+}
+
+.motionToggle:hover {
+  background-color: var(--colorCream);
+}
+
+.motionToggle:focus-visible {
+  outline: 3px solid var(--colorCrimson);
+  outline-offset: 3px;
+}
+
+/**************************************************************
+Scene
+***************************************************************/
+.sceneStage {
+  position: fixed;
+  inset: 0;
+}
+
+.sceneCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sceneError {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: 28rem;
+  margin: 0;
+  padding: var(--spaceMd) var(--spaceLg);
+  color: var(--colorInk);
+  background-color: var(--colorCream);
+  border-left: 4px solid var(--colorCrimson);
+  transform: translate(-50%, -50%);
+}
+
+/**************************************************************
+Footer
+***************************************************************/
+.siteFooter {
+  position: fixed;
+  left: var(--spaceMd);
+  bottom: var(--spaceMd);
+  max-width: calc(100% - 10rem);
+}
+
+.siteCredit {
+  margin: 0;
+  padding: var(--spaceXs) var(--spaceMd);
+  font-size: var(--fontSizeSm);
+  color: var(--colorInk);
+  background-color: var(--colorCreamVeil);
+  border-radius: var(--radiusPill);
+}
+
+/**************************************************************
+Media queries
+***************************************************************/
+@media (max-width: 40em) {
+  .siteCredit {
+    border-radius: var(--radiusCard);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
