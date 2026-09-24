@@ -1,6 +1,8 @@
 ## Description
 This web application is a static webpage that utilizes a JavaScript 3D Library to render an animation in the style of MadHouse, Inc.
 
+Deployed on Netlify: https://karakurenai.netlify.app/
+
 ## Demo
 
 
