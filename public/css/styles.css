@@ -116,7 +116,7 @@ Scene
 .sceneControls {
   position: fixed;
   right: var(--spaceMd);
-  bottom: var(--spaceMd);
+  top: var(--spaceMd);
   display: flex;
   gap: var(--spaceSm);
 }
