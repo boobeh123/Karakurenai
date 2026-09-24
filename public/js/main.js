@@ -1,6 +1,7 @@
 import * as THREE from './lib/three.js';
 import { createKarutaHall } from './karutaHall.js';
 import { createPostPass } from './postPass.js';
+import { createSoundscape } from './soundscape.js';
 
 /**************************************************************
 DOM selectors
@@ -9,6 +10,8 @@ const sceneCanvas = document.querySelector('.sceneCanvas');
 const sceneError = document.querySelector('.sceneError');
 const motionToggle = document.querySelector('.motionToggle');
 const motionToggleLabel = document.querySelector('.motionToggleLabel');
+const soundToggle = document.querySelector('.soundToggle');
+const soundToggleState = document.querySelector('.soundToggleState');
 
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const MAX_PIXEL_RATIO = 2;
@@ -30,6 +33,7 @@ let postPass = null;
 let isPlaying = !reducedMotionQuery.matches;
 let sceneTime = 0;
 let lastFrameTime = null;
+const soundscape = createSoundscape();
 
 /**************************************************************
 Helpers
@@ -38,10 +42,26 @@ function showError(message) {
   sceneError.textContent = message;
   sceneError.hidden = false;
   motionToggle.hidden = true;
+  soundToggle.hidden = true;
 }
 
 function updateMotionToggle() {
   motionToggleLabel.textContent = isPlaying ? 'Pause' : 'Play';
+}
+
+function updateSoundToggle() {
+  const isOn = soundscape.isEnabled();
+  soundToggle.setAttribute('aria-pressed', String(isOn));
+  soundToggleState.textContent = isOn ? 'on' : 'off';
+}
+
+// Sound follows the scene: it stops with Pause and while the tab is hidden
+async function syncSound() {
+  try {
+    await soundscape.setRunning(isPlaying && !document.hidden);
+  } catch (error) {
+    console.warn('Sound could not follow the scene state.', error);
+  }
 }
 
 // Slow dolly from the player's side, wide to close and back
@@ -85,12 +105,14 @@ function play() {
   if (!document.hidden) {
     startLoop();
   }
+  syncSound();
 }
 
 function pause() {
   isPlaying = false;
   updateMotionToggle();
   stopLoop();
+  syncSound();
 }
 
 function toggleMotion() {
@@ -127,6 +149,19 @@ function handleVisibilityChange() {
   } else if (isPlaying) {
     startLoop();
   }
+  syncSound();
+}
+
+// Browsers only let audio start from a click, so the soundscape is built here
+async function toggleSound() {
+  try {
+    await soundscape.setEnabled(!soundscape.isEnabled());
+    updateSoundToggle();
+  } catch (error) {
+    console.error(error);
+    soundToggle.disabled = true;
+    soundToggleState.textContent = 'unavailable';
+  }
 }
 
 function handleReducedMotionChange(event) {
@@ -151,6 +186,7 @@ async function init() {
     resizeScene();
     renderFrame();
     updateMotionToggle();
+    soundToggle.hidden = !soundscape.isSupported;
     if (isPlaying) {
       play();
     }
@@ -165,6 +201,7 @@ async function init() {
 Event listeners
 ***************************************************************/
 motionToggle.addEventListener('click', toggleMotion);
+soundToggle.addEventListener('click', toggleSound);
 window.addEventListener('resize', resizeScene);
 document.addEventListener('visibilitychange', handleVisibilityChange);
 reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
