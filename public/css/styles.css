@@ -8,6 +8,7 @@ Base
   --colorInk: #2b1d16;
   --colorInkSoft: rgba(43, 29, 22, 0.55);
   --colorCrimson: #b3122e;
+  --colorCrimsonDeep: #8e0e24;
 
   --fontBody: 'Shippori Mincho', 'Yu Mincho', serif;
   --fontBrush: 'Yuji Syuku', 'Yu Mincho', serif;
@@ -54,10 +55,7 @@ Utilities
 /**************************************************************
 Components
 ***************************************************************/
-.motionToggle {
-  position: fixed;
-  right: var(--spaceMd);
-  bottom: var(--spaceMd);
+.controlButton {
   padding: var(--spaceSm) var(--spaceLg);
   font-family: var(--fontBody);
   font-size: var(--fontSizeMd);
@@ -69,13 +67,36 @@ Components
   cursor: pointer;
 }
 
-.motionToggle:hover {
+.controlButton:hover {
   background-color: var(--colorCream);
 }
 
-.motionToggle:focus-visible {
+.controlButton:focus-visible {
   outline: 3px solid var(--colorCrimson);
   outline-offset: 3px;
+}
+
+.controlButton:disabled {
+  cursor: not-allowed;
+}
+
+.soundToggle[aria-pressed='true'] {
+  color: var(--colorCream);
+  background-color: var(--colorCrimson);
+  border-color: var(--colorCrimson);
+}
+
+.soundToggle[aria-pressed='true']:hover {
+  background-color: var(--colorCrimsonDeep);
+}
+
+/* The on/off badge repeats the pressed state in words, so it isn't shown by colour alone */
+.soundToggleState {
+  margin-left: var(--spaceSm);
+  padding: 0 var(--spaceSm);
+  font-size: var(--fontSizeSm);
+  border: 1px solid currentColor;
+  border-radius: var(--radiusPill);
 }
 
 /**************************************************************
@@ -90,6 +111,14 @@ Scene
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.sceneControls {
+  position: fixed;
+  right: var(--spaceMd);
+  bottom: var(--spaceMd);
+  display: flex;
+  gap: var(--spaceSm);
 }
 
 .sceneError {
@@ -112,7 +141,7 @@ Footer
   position: fixed;
   left: var(--spaceMd);
   bottom: var(--spaceMd);
-  max-width: calc(100% - 10rem);
+  max-width: calc(100% - 18rem);
 }
 
 .siteCredit {
@@ -127,7 +156,14 @@ Footer
 /**************************************************************
 Media queries
 ***************************************************************/
-@media (max-width: 40em) {
+/* Too narrow for the credit and the controls on one line: move the credit to the top */
+@media (max-width: 56em) {
+  .siteFooter {
+    top: var(--spaceMd);
+    bottom: auto;
+    max-width: calc(100% - 2rem);
+  }
+
   .siteCredit {
     border-radius: var(--radiusCard);
   }
