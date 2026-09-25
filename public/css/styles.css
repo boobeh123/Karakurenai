@@ -16,6 +16,7 @@ Base
   --fontSizeSm: 0.8rem;
   --fontSizeMd: 0.95rem;
   --fontSizePoem: clamp(1.3rem, 2.6vw, 2rem);
+  --lineHeightPoem: 1.5;
 
   --spaceXs: 0.35rem;
   --spaceSm: 0.5rem;
@@ -185,7 +186,11 @@ Overlays
   opacity: 1;
 }
 
+/* The poem's five vertical lines get an explicit width. Safari on iOS can't measure vertical
+   text inside a flex row: it treats the block as zero wide, and the caption lands on top. */
 .poemText {
+  flex: none;
+  width: calc(var(--fontSizePoem) * var(--lineHeightPoem) * 5);
   margin: 0;
 }
 
@@ -193,7 +198,7 @@ Overlays
   margin: 0;
   font-family: var(--fontBrush);
   font-size: var(--fontSizePoem);
-  line-height: 1.5;
+  line-height: var(--lineHeightPoem);
   writing-mode: vertical-rl;
 }
 
@@ -244,9 +249,11 @@ Media queries
   }
 }
 
-/* Phones: the poem sits under the scene controls instead of centred on the left */
+/* Phones: the poem sits under the scene controls instead of centred on the left, with
+   smaller columns and caption so the panel fits inside the screen's side margins */
 @media (max-width: 40em) {
   .poemCard {
+    --fontSizePoem: 1.15rem;
     top: 4.5rem;
     left: var(--spaceMd);
     gap: var(--spaceMd);
@@ -255,7 +262,7 @@ Media queries
   }
 
   .poemCaption {
-    max-width: 11rem;
+    max-width: 10rem;
   }
 }
 
