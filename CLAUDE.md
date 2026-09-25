@@ -72,7 +72,8 @@ Things to know when adding to the scene:
 - **Lifecycle:** the `AudioContext` is created lazily inside the Sound button's click handler, because of autoplay rules and iOS. Sound plays only when `setEnabled(true)` (the user's toggle) and `setRunning(true)` are both set. `setRunning` follows `isPlaying && !document.hidden`. Otherwise the context is suspended, which freezes the audio clock so scheduled music stays in step with the paused scene.
 - **Koto:** plucks are Karplus-Strong strings, pre-rendered for each scale note. The fractional-delay allpass in `renderPluck` keeps them in tune; without it they drift sharp by up to a third of a semitone.
 - **Melody:** a lookahead scheduler composes phrases in the miyako-bushi scale on D, ending on D or A, with rests between phrases.
-- **Music bus:** music (plucks and drone) runs through its own dry and reverb buses, so `setMusicDucked()` can fade it out before the first syllable while the room air and crickets continue. It is safe to call every frame; only a change starts a fade.
+- **Music bus:** music (plucks and drone) runs through its own dry and reverb buses, so `setMusicDucked()` can fade it out before the first syllable while the room air and higurashi cicadas continue. It is safe to call every frame; only a change starts a fade.
+- **Rest and re-entry:** the koto composes no new phrases while ducked. When the music returns, a phrase starts about 0.3 s later with a sararin sweep into D5. Without this, the short unducked window at the start of each loop often held no audible notes; one measured loop had none.
 - **Cues:** `playCue(name)` plays the one-shot effects: `breath`, `bell` (a rin with inharmonic partials), `slap`, and `whoosh`. Each is built from the shared noise buffer or oscillators, and is ignored unless sound is on and running.
 
 ## Accessibility constraints
