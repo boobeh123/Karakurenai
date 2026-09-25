@@ -162,11 +162,12 @@ Overlays
 /**************************************************************
 Footer
 ***************************************************************/
+/* Bottom-left on every screen size; the scene controls sit at the top right */
 .siteFooter {
   position: fixed;
   left: var(--spaceMd);
   bottom: var(--spaceMd);
-  max-width: calc(100% - 18rem);
+  max-width: calc(100% - var(--spaceMd) * 2);
 }
 
 .siteCredit {
@@ -181,14 +182,8 @@ Footer
 /**************************************************************
 Media queries
 ***************************************************************/
-/* Too narrow for the credit and the controls on one line: move the credit to the top */
+/* The credit wraps onto two lines here, so it gets card corners instead of a pill */
 @media (max-width: 56em) {
-  .siteFooter {
-    top: var(--spaceMd);
-    bottom: auto;
-    max-width: calc(100% - 2rem);
-  }
-
   .siteCredit {
     border-radius: var(--radiusCard);
   }
