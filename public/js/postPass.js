@@ -1,4 +1,4 @@
-import * as THREE from './lib/three.js';
+import * as THREE from 'three';
 
 // Effect meshes (light beams, dust, sparkles) live on this layer. The normal pass skips it,
 // so effects never get ink outlines.

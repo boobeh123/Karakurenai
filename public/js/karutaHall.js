@@ -1,4 +1,4 @@
-import * as THREE from './lib/three.js';
+import * as THREE from 'three';
 import {
   createCardFaceTexture,
   createSeededRandom,

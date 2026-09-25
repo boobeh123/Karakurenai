@@ -1,4 +1,4 @@
-import * as THREE from './lib/three.js';
+import * as THREE from 'three';
 import { createKarutaHall } from './karutaHall.js';
 import { createPostPass } from './postPass.js';
 import { createSoundscape } from './soundscape.js';

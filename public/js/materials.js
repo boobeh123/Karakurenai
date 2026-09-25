@@ -1,4 +1,4 @@
-import * as THREE from './lib/three.js';
+import * as THREE from 'three';
 
 // Real grab cards are 5.2 cm x 7.3 cm
 const CARD_ASPECT = 7.3 / 5.2;
