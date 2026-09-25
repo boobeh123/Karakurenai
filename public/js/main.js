@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createDirector, fitFieldOfView, LOOP_SECONDS } from './director.js';
 import { createKarutaHall } from './karutaHall.js';
 import { createPostPass } from './postPass.js';
 import { createSoundscape } from './soundscape.js';
@@ -8,6 +9,7 @@ DOM selectors
 ***************************************************************/
 const sceneCanvas = document.querySelector('.sceneCanvas');
 const sceneError = document.querySelector('.sceneError');
+const syllableCue = document.querySelector('.syllableCue');
 const motionToggle = document.querySelector('.motionToggle');
 const motionToggleLabel = document.querySelector('.motionToggleLabel');
 const soundToggle = document.querySelector('.soundToggle');
@@ -17,23 +19,21 @@ const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
 const MAX_PIXEL_RATIO = 2;
 // Caps the time step after a stall so the scene never jumps ahead
 const MAX_FRAME_SECONDS = 0.1;
-// The camera eases between a wide shot into the window light and a close view of the cards
-const DRIFT_SECONDS = 32;
-const DRIFT_POSES = {
-  wide: { position: new THREE.Vector3(16, 64, 150), target: new THREE.Vector3(-4, 8, -60) },
-  close: { position: new THREE.Vector3(10, 30, 46), target: new THREE.Vector3(-3, 0, -2) },
-};
-const driftTarget = new THREE.Vector3();
 
 let renderer = null;
 let scene = null;
 let camera = null;
 let hall = null;
+let director = null;
 let postPass = null;
 let isPlaying = !reducedMotionQuery.matches;
 let sceneTime = 0;
+let previousLoopTime = 0;
 let lastFrameTime = null;
 const soundscape = createSoundscape();
+const drawingBufferSize = new THREE.Vector2();
+const shakeOffset = new THREE.Vector3();
+const speedCenter = new THREE.Vector3();
 
 /**************************************************************
 Helpers
@@ -43,6 +43,11 @@ function showError(message) {
   sceneError.hidden = false;
   motionToggle.hidden = true;
   soundToggle.hidden = true;
+}
+
+// The renderer exists before the fonts load; the scene is only ready once setup finishes
+function isSceneReady() {
+  return renderer !== null && postPass !== null;
 }
 
 function updateMotionToggle() {
@@ -64,20 +69,65 @@ async function syncSound() {
   }
 }
 
-// Slow dolly from the player's side, wide to close and back
-function updateCamera(time) {
-  const blend = 0.5 - 0.5 * Math.cos((time / DRIFT_SECONDS) * Math.PI * 2);
-  camera.position.lerpVectors(DRIFT_POSES.wide.position, DRIFT_POSES.close.position, blend);
-  driftTarget.lerpVectors(DRIFT_POSES.wide.target, DRIFT_POSES.close.target, blend);
-  camera.lookAt(driftTarget);
+// Dev server only: ?t=8 opens the sequence paused at 8 seconds, to inspect that moment.
+// Vite removes this branch from production builds.
+function getRequestedStartTime() {
+  if (!import.meta.env.DEV) return null;
+  const param = new URLSearchParams(window.location.search).get('t');
+  const requested = Number(param);
+  return param !== null && Number.isFinite(requested) ? requested : null;
+}
+
+function updateCamera({ camera: shot, fx }) {
+  camera.position.copy(shot.position);
+  if (fx.shake > 0) {
+    shakeOffset.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+    camera.position.addScaledVector(shakeOffset, fx.shake * 2);
+  }
+  camera.lookAt(shot.target);
+
+  const fov = fitFieldOfView(shot.fov, camera.aspect);
+  if (camera.fov !== fov) {
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
+}
+
+// Converts a size in centimetres to pixels at 1 cm from the camera, for point sprites
+function getPointScale() {
+  renderer.getDrawingBufferSize(drawingBufferSize);
+  return drawingBufferSize.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+}
+
+function updateEffects({ fx }) {
+  const { uniforms } = postPass;
+  uniforms.impact.value = fx.impact;
+  uniforms.speedLines.value = fx.speedLines;
+  if (fx.speedLines > 0) {
+    // Lines radiate from wherever the flying card is on screen
+    speedCenter.copy(hall.heroCard.mesh.position).project(camera);
+    uniforms.speedCenter.value.set(speedCenter.x * 0.5 + 0.5, speedCenter.y * 0.5 + 0.5);
+  }
+  syllableCue.classList.toggle('isVisible', fx.syllable);
+}
+
+function updateSound({ fx }, loopTime) {
+  soundscape.setMusicDucked(fx.musicDucked);
+  director.getCues(previousLoopTime, loopTime).forEach((cue) => soundscape.playCue(cue));
 }
 
 /**************************************************************
 Main logic
 ***************************************************************/
 function renderFrame() {
-  hall.update(sceneTime);
-  updateCamera(sceneTime);
+  const loopTime = sceneTime % LOOP_SECONDS;
+  const frame = director.getFrame(loopTime, { reducedMotion: reducedMotionQuery.matches });
+
+  updateCamera(frame);
+  hall.update({ time: sceneTime, drawnTime: frame.drawnTime, fx: frame.fx, pointScale: getPointScale() });
+  updateEffects(frame);
+  updateSound(frame, loopTime);
+  previousLoopTime = loopTime;
   postPass.render(sceneTime);
 }
 
@@ -116,7 +166,7 @@ function pause() {
 }
 
 function toggleMotion() {
-  if (!renderer) return;
+  if (!isSceneReady()) return;
   if (isPlaying) {
     pause();
   } else {
@@ -125,7 +175,7 @@ function toggleMotion() {
 }
 
 function resizeScene() {
-  if (!renderer) return;
+  if (!isSceneReady()) return;
   const width = sceneCanvas.clientWidth;
   const height = sceneCanvas.clientHeight;
   const pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
@@ -143,7 +193,7 @@ function resizeScene() {
 }
 
 function handleVisibilityChange() {
-  if (!renderer) return;
+  if (!isSceneReady()) return;
   if (document.hidden) {
     stopLoop();
   } else if (isPlaying) {
@@ -181,7 +231,14 @@ async function init() {
     hall = await createKarutaHall({ maxAnisotropy: renderer.capabilities.getMaxAnisotropy() });
     scene.add(hall.group);
     scene.background = hall.background;
+    director = createDirector({ heroPosition: hall.heroRestPosition, readerPosition: hall.readerPosition });
     postPass = createPostPass(renderer, scene, camera);
+    const requestedStartTime = getRequestedStartTime();
+    if (requestedStartTime !== null) {
+      sceneTime = requestedStartTime;
+      isPlaying = false;
+    }
+    previousLoopTime = sceneTime % LOOP_SECONDS;
 
     resizeScene();
     renderFrame();

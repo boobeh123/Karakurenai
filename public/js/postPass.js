@@ -7,6 +7,8 @@ export const FX_LAYER = 1;
 const COLOR_SAMPLES = 4;
 const LINE_WIDTH = 1;
 const INK_COLOR = '#3b2418';
+const PAPER_COLOR = '#fbf4e4';
+const ACCENT_COLOR = '#b3122e';
 
 /**************************************************************
 Shaders
@@ -35,6 +37,11 @@ const fragmentShader = /* glsl */ `
   uniform float time;
   uniform float grainAmount;
   uniform float vignetteAmount;
+  uniform vec3 paperColor;
+  uniform vec3 accentColor;
+  uniform float impact;
+  uniform float speedLines;
+  uniform vec2 speedCenter;
 
   varying vec2 vUv;
 
@@ -76,6 +83,21 @@ const fragmentShader = /* glsl */ `
     float ink = max(depthEdge, normalEdge) * inkStrength;
     vec3 color = mix(texture2D(tColor, vUv).rgb, inkColor, ink);
 
+    // Impact frame: for an instant the picture collapses to paper and ink, lines in crimson
+    if (impact > 0.5) {
+      float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+      color = mix(luminance > 0.3 ? paperColor : inkColor, accentColor, ink);
+    }
+
+    // Speed lines radiate from the action and are redrawn 12 times a second
+    if (speedLines > 0.0) {
+      vec2 fromCenter = (vUv - speedCenter) * vec2(resolution.x / resolution.y, 1.0);
+      float lane = floor((atan(fromCenter.y, fromCenter.x) / 6.28318 + 0.5) * 520.0);
+      float isLine = step(0.86, hash(vec2(lane, floor(time * 12.0))));
+      float reach = smoothstep(0.1, 0.5, length(fromCenter));
+      color = mix(color, paperColor, isLine * reach * speedLines * 0.8);
+    }
+
     vec2 centered = (vUv - 0.5) * vec2(resolution.x / resolution.y, 1.0);
     color *= 1.0 - vignetteAmount * smoothstep(0.35, 1.0, length(centered));
 
@@ -114,6 +136,11 @@ export function createPostPass(renderer, scene, camera) {
     time: { value: 0 },
     grainAmount: { value: 0.035 },
     vignetteAmount: { value: 0.22 },
+    paperColor: { value: new THREE.Color(PAPER_COLOR) },
+    accentColor: { value: new THREE.Color(ACCENT_COLOR) },
+    impact: { value: 0 },
+    speedLines: { value: 0 },
+    speedCenter: { value: new THREE.Vector2(0.5, 0.5) },
   };
 
   const compositeMaterial = new THREE.ShaderMaterial({

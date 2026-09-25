@@ -24,9 +24,11 @@ const MAT_WIDTH = 91;
 const MAT_THICKNESS = 5;
 const MAT_ROW_COUNT = 7;
 
-// The window is in the wall behind the opponent, so the player's view looks into the light
+// The window is in the wall behind the opponent, so the player's view looks into the light.
+// The sill height puts the lattice's horizontal shadows just outside the board's rows
+// (z ≈ -25 and +26), so every card sits in the light.
 const ROOM = { minX: -250, maxX: 250, minZ: -200, maxZ: 260, height: 270, wallThickness: 12 };
-const WINDOW = { bottom: 40, top: 200, centerX: -60, halfWidth: 120 };
+const WINDOW = { bottom: 48, top: 200, centerX: -60, halfWidth: 120 };
 const LATTICE = { columnSpacing: 30, rowSpacing: 32, barSize: 2.4, barDepth: 3 };
 const LATTICE_Z = ROOM.minZ - ROOM.wallThickness / 2;
 
@@ -60,6 +62,25 @@ const TERRITORY_ROWS = {
   ],
 };
 const HERO_SLOT = { side: 'player', rowIndex: 1, index: 1 };
+
+// The reader kneels beside the board on the centre line, facing it
+const READER_POSITION = new THREE.Vector3(-80, 0, 0);
+
+// The swept card arcs up toward the camera and tumbles end over end
+const FLIGHT_CONTROL = new THREE.Vector3(1, 15, 4);
+const FLIGHT_END = new THREE.Vector3(4, 10, 11);
+const FLIGHT_TUMBLES = 2.5;
+// Cards this close to the hero card skid when it is swept away
+const SKID_RADIUS = 14;
+
+const DUST_COUNT = 220;
+const SPARKLE_COUNT = 6;
+const FX_COLORS = {
+  dust: '#fff1d6',
+  ring: '#ece6ff',
+  smear: '#fff6ec',
+  sparkle: '#fff4c8',
+};
 
 /**************************************************************
 Helpers
@@ -300,6 +321,219 @@ function createSunBeams() {
 }
 
 /**************************************************************
+Effects
+***************************************************************/
+// Dust motes drifting inside the sun beams. Each mote sits somewhere along a ray between
+// the window and the floor, and wanders around that spot in the vertex shader.
+function createDust(random) {
+  const openingLeft = WINDOW.centerX - WINDOW.halfWidth;
+  const positions = new Float32Array(DUST_COUNT * 3);
+  const seeds = new Float32Array(DUST_COUNT);
+
+  Array.from({ length: DUST_COUNT }).forEach((_, index) => {
+    const mote = new THREE.Vector3(
+      openingLeft + random() * WINDOW.halfWidth * 2,
+      WINDOW.bottom + random() * (WINDOW.top - WINDOW.bottom),
+      ROOM.minZ
+    );
+    const rayLength = mote.y / SUN_DIRECTION.y;
+    mote.addScaledVector(SUN_DIRECTION, -(0.15 + random() * 0.8) * rayLength);
+    positions.set([mote.x, mote.y, mote.z], index * 3);
+    seeds[index] = random();
+  });
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('seed', new THREE.BufferAttribute(seeds, 1));
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0 },
+      pointScale: { value: 1 },
+      color: { value: new THREE.Color(FX_COLORS.dust) },
+    },
+    vertexShader: /* glsl */ `
+      attribute float seed;
+      uniform float time;
+      uniform float pointScale;
+      varying float vAlpha;
+
+      void main() {
+        float phase = seed * 6.2831;
+        vec3 drift = vec3(
+          sin(time * 0.23 + phase) * 4.0,
+          sin(time * 0.31 + phase * 1.7) * 3.0,
+          cos(time * 0.19 + phase * 2.3) * 4.0
+        );
+        vec4 viewPosition = modelViewMatrix * vec4(position + drift, 1.0);
+        gl_PointSize = (0.35 + seed * 0.5) * pointScale / -viewPosition.z;
+        vAlpha = 0.45 + 0.35 * sin(time * 1.3 + phase * 3.0);
+        gl_Position = projectionMatrix * viewPosition;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 color;
+      varying float vAlpha;
+
+      void main() {
+        float softness = smoothstep(0.5, 0.0, length(gl_PointCoord - 0.5));
+        gl_FragColor = vec4(color, softness * vAlpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  const dust = new THREE.Points(geometry, material);
+  dust.layers.set(FX_LAYER);
+  return dust;
+}
+
+// The reader's voice, drawn as rings that spread out across the tatami. Normal blending,
+// because an additive pale ring vanishes against the sunlit mats.
+function createSoundRings() {
+  const geometry = new THREE.RingGeometry(0.93, 1, 128);
+  geometry.rotateX(-Math.PI / 2);
+
+  return [0, 0.22].map((delay) => {
+    const material = new THREE.MeshBasicMaterial({
+      color: FX_COLORS.ring,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(READER_POSITION.x, 0.4, READER_POSITION.z);
+    mesh.layers.set(FX_LAYER);
+    mesh.visible = false;
+    return { mesh, delay };
+  });
+}
+
+// Smear frame: the sweeping hand stretched into a streaked ribbon along its path.
+// Feature 2b draws the hand itself at the ribbon's head.
+function createSmear() {
+  const curve = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(16, 2.5, 24),
+    new THREE.Vector3(-2, 4, 18),
+    new THREE.Vector3(-26, 3, 8)
+  );
+  const segments = 40;
+  const positions = [];
+  const uvs = [];
+  const indices = [];
+
+  Array.from({ length: segments + 1 }).forEach((_, index) => {
+    const along = index / segments;
+    const point = curve.getPoint(along);
+    const tangent = curve.getTangent(along);
+    // Widens toward the head, the way a smear trails off behind the hand
+    const halfWidth = 2.6 * (0.35 + 0.65 * along);
+    const side = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize().multiplyScalar(halfWidth);
+    positions.push(...point.clone().sub(side).toArray(), ...point.clone().add(side).toArray());
+    uvs.push(along, 0, along, 1);
+    if (index < segments) {
+      const first = index * 2;
+      indices.push(first, first + 1, first + 2, first + 1, first + 3, first + 2);
+    }
+  });
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      progress: { value: 0 },
+      color: { value: new THREE.Color(FX_COLORS.smear) },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float progress;
+      uniform vec3 color;
+      varying vec2 vUv;
+
+      void main() {
+        float trail = smoothstep(progress - 0.55, progress, vUv.x) * step(vUv.x, progress);
+        float streaks = 0.6 + 0.4 * step(0.5, fract(vUv.y * 6.0));
+        float edges = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.75, vUv.y);
+        gl_FragColor = vec4(color, trail * streaks * edges * 0.95);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const smear = new THREE.Mesh(geometry, material);
+  smear.layers.set(FX_LAYER);
+  smear.visible = false;
+  return smear;
+}
+
+// Four-pointed sparkles that pop around the flying card
+function createSparkles(random) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKLE_COUNT * 3), 3));
+  geometry.setAttribute('life', new THREE.BufferAttribute(new Float32Array(SPARKLE_COUNT), 1));
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      pointScale: { value: 1 },
+      color: { value: new THREE.Color(FX_COLORS.sparkle) },
+    },
+    vertexShader: /* glsl */ `
+      attribute float life;
+      uniform float pointScale;
+      varying float vLife;
+
+      void main() {
+        vLife = life;
+        vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = 4.0 * sin(life * 3.14159) * pointScale / -viewPosition.z;
+        gl_Position = projectionMatrix * viewPosition;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 color;
+      varying float vLife;
+
+      void main() {
+        vec2 point = gl_PointCoord * 2.0 - 1.0;
+        float arms = max(
+          1.0 - abs(point.x) * 9.0 - abs(point.y),
+          1.0 - abs(point.y) * 9.0 - abs(point.x)
+        );
+        float glow = 1.0 - length(point) * 2.5;
+        float star = clamp(max(arms, glow), 0.0, 1.0);
+        gl_FragColor = vec4(color, star * sin(vLife * 3.14159));
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  const sparkles = new THREE.Points(geometry, material);
+  sparkles.layers.set(FX_LAYER);
+  sparkles.frustumCulled = false;
+  const offsets = Array.from(
+    { length: SPARKLE_COUNT },
+    () => new THREE.Vector3((random() - 0.5) * 12, (random() - 0.3) * 8, (random() - 0.5) * 10)
+  );
+  return { sparkles, offsets };
+}
+
+/**************************************************************
 Cards
 ***************************************************************/
 function createCards(maxAnisotropy, random) {
@@ -367,18 +601,105 @@ export async function createKarutaHall({ maxAnisotropy }) {
   const { group: cardGroup, cards } = createCards(maxAnisotropy, random);
   const beams = createSunBeams();
   const baseBeamOpacity = beams.material.uniforms.opacity.value;
+  const dust = createDust(random);
+  const rings = createSoundRings();
+  const smear = createSmear();
+  const { sparkles, offsets: sparkleOffsets } = createSparkles(random);
 
-  group.add(createFloor(maxAnisotropy), createWindowWall(), createSideWalls(), createLights(), cardGroup, beams);
+  group.add(
+    createFloor(maxAnisotropy),
+    createWindowWall(),
+    createSideWalls(),
+    createLights(),
+    cardGroup,
+    beams,
+    dust,
+    smear,
+    sparkles,
+    ...rings.map(({ mesh }) => mesh)
+  );
 
-  function update(time) {
+  // Resting places, so every loop starts from the same layout
+  const heroCard = cards.find((card) => card.isHero);
+  const heroRest = { position: heroCard.mesh.position.clone(), rotation: heroCard.mesh.rotation.clone() };
+  const flightCurve = new THREE.QuadraticBezierCurve3(
+    heroRest.position.clone(),
+    heroRest.position.clone().add(FLIGHT_CONTROL),
+    heroRest.position.clone().add(FLIGHT_END)
+  );
+  const neighbours = cards
+    .filter((card) => !card.isHero && card.mesh.position.distanceTo(heroRest.position) < SKID_RADIUS)
+    .map(({ mesh }) => {
+      const away = mesh.position.clone().sub(heroRest.position).setY(0);
+      const falloff = 1 - away.length() / SKID_RADIUS;
+      return {
+        mesh,
+        restPosition: mesh.position.clone(),
+        restAngle: mesh.rotation.y,
+        push: away.normalize().multiplyScalar(2.2 * falloff),
+        spin: (random() - 0.5) * 0.3 * falloff,
+      };
+    });
+
+  function updateCards(fx) {
+    if (fx.flight > 0) {
+      heroCard.mesh.position.copy(flightCurve.getPoint(fx.flight));
+      heroCard.mesh.rotation.set(
+        heroRest.rotation.x - fx.flight * FLIGHT_TUMBLES * Math.PI * 2,
+        heroRest.rotation.y + fx.flight * 0.6,
+        heroRest.rotation.z + fx.flight * Math.PI * 1.5
+      );
+    } else {
+      heroCard.mesh.position.copy(heroRest.position);
+      heroCard.mesh.rotation.copy(heroRest.rotation);
+    }
+
+    neighbours.forEach(({ mesh, restPosition, restAngle, push, spin }) => {
+      mesh.position.copy(restPosition).addScaledVector(push, fx.skid);
+      mesh.rotation.y = restAngle + spin * fx.skid;
+    });
+  }
+
+  function updateEffects(fx, drawnTime, pointScale) {
+    dust.material.uniforms.time.value = drawnTime;
+    dust.material.uniforms.pointScale.value = pointScale;
+
+    rings.forEach(({ mesh, delay }) => {
+      const progress = Math.min(1, Math.max(0, (fx.ring - delay) / (1 - delay)));
+      mesh.visible = progress > 0 && progress < 1;
+      mesh.scale.setScalar(5 + progress * 150);
+      mesh.material.opacity = 0.8 * (1 - progress) ** 1.2;
+    });
+
+    smear.visible = fx.smear > 0;
+    smear.material.uniforms.progress.value = fx.smear * 1.2;
+
+    const positions = sparkles.geometry.attributes.position;
+    const lives = sparkles.geometry.attributes.life;
+    sparkleOffsets.forEach((offset, index) => {
+      const spawn = (index / SPARKLE_COUNT) * 0.7;
+      lives.setX(index, Math.min(1, Math.max(0, (fx.sparkle - spawn) / 0.3)));
+      positions.setXYZ(index, ...heroCard.mesh.position.clone().add(offset).toArray());
+    });
+    positions.needsUpdate = true;
+    lives.needsUpdate = true;
+    sparkles.material.uniforms.pointScale.value = pointScale;
+  }
+
+  // time drives smooth light changes; drawnTime (stepped on twos) drives drawn motion
+  function update({ time, drawnTime, fx, pointScale }) {
     // A slow breath in the light, as if thin clouds pass the sun
     beams.material.uniforms.opacity.value = baseBeamOpacity * (0.85 + 0.15 * Math.sin(time * 0.6));
+    updateCards(fx);
+    updateEffects(fx, drawnTime, pointScale);
   }
 
   return {
     group,
     cards,
-    heroCard: cards.find((card) => card.isHero),
+    heroCard,
+    heroRestPosition: heroRest.position.clone(),
+    readerPosition: READER_POSITION.clone(),
     background: new THREE.Color(COLORS.exterior),
     update,
   };
