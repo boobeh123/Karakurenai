@@ -6,21 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Karakurenai is a static three.js page: an anime-style (Madhouse / *Chihayafuru*-inspired) scene built around Hyakunin Isshu poem No. 17, 「ちはやぶる … からくれなゐに 水くくるとは」. It is deployed on Netlify (https://karakurenai.netlify.app/) from the GitHub repo boobeh123/Karakurenai, so a push to `main` is a production deploy.
 
-There is no package.json, bundler, linter, or test suite. Everything is plain ES modules loaded in the browser; three.js and the fonts come from CDNs.
+Vite builds the site. three.js comes from npm and is pinned to an exact version in `package.json`, because three makes breaking changes between 0.x releases. Google Fonts and normalize.css still load from CDNs. Netlify runs `npm run build` and publishes `dist/`, as configured in `netlify.toml`. There is no linter or test suite.
 
-## Running locally
-
-ES modules don't load from `file://`, and `index.html` links `/public/css/styles.css` with a root-absolute path, so serve the repo root:
+## Commands
 
 ```
-npx serve .
+npm install        # once
+npm run dev        # dev server with reload on save: http://localhost:5173
+npm run build      # production build into dist/
+npm run preview    # serve dist/ to check the production build: http://localhost:4173
 ```
 
-Then open http://localhost:3000 (VS Code Live Server also works).
+Windows PowerShell 5.1 swallows the `--` in `npm run preview -- --port 1234`, so npm receives the flags instead of Vite. To pass flags to Vite, call it directly, e.g. `npx vite preview --port 1234`.
+
+Vite warns that the bundle is over 500 kB. That's expected, because three.js makes up most of it.
 
 ## Architecture
 
-**Entry and dependencies.** `index.html` loads `public/js/main.js` as `type="module"`. There is deliberately no import map, because it would need an inline `<script>`, which the code standards forbid. Every module imports three from `public/js/lib/three.js`, which re-exports a pinned jsDelivr build; change the three.js version only there. Because there is no import map, three.js addons (`examples/jsm/...`, which import the bare specifier `three`) can't be used. Post-processing and shaders are hand-written instead.
+**Entry and dependencies.**
+- **Entry:** `index.html` loads `public/js/main.js` as `type="module"`, and Vite bundles everything from there.
+- **Imports:** modules use `import * as THREE from 'three'`. Official add-ons come from the same package, e.g. `import { SVGLoader } from 'three/addons/loaders/SVGLoader.js'`.
+- **`publicDir: false`:** `vite.config.js` sets this because `public/` holds the site's JS and CSS source. By default Vite would copy that folder as unprocessed static files, which would break the imports. Keep source files under `public/`.
+- **Post-processing:** it is hand-written in `postPass.js` rather than built on `EffectComposer`, and it does exactly what the scene needs.
 
 **Frame loop (`main.js`).** `renderer.setAnimationLoop` drives the frames. `sceneTime` advances by clamped frame deltas and stops while the scene is paused or the tab is hidden. The camera currently runs a temporary wide-to-close drift in `updateCamera`. The planned `director.js` replaces it (see Roadmap). With `prefers-reduced-motion`, the page starts paused.
 
@@ -71,4 +78,4 @@ Object motion is meant to be animated "on twos" (12 fps) while the camera moves 
 
 ## Visual verification
 
-Headless Edge (`msedge --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --screenshot=...`) renders the scene, but with `--virtual-time-budget` the animation loop doesn't advance, so screenshots show the first frame. Minimum window width also crops narrow `--window-size` captures. For motion, audio, or phone layouts, drive Edge over the DevTools protocol instead: launch it with `--remote-debugging-port`, then use `Emulation.setDeviceMetricsOverride` with `mobile: true`, and `Runtime.evaluate` with `userGesture: true` for clicks.
+Point checks at `npm run dev` or `npm run preview`. Headless Edge (`msedge --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --screenshot=...`) renders the scene, but with `--virtual-time-budget` the animation loop doesn't advance, so screenshots show the first frame. Minimum window width also crops narrow `--window-size` captures. For motion, audio, or phone layouts, drive Edge over the DevTools protocol instead: launch it with `--remote-debugging-port`, then use `Emulation.setDeviceMetricsOverride` with `mobile: true`, and `Runtime.evaluate` with `userGesture: true` for clicks.
