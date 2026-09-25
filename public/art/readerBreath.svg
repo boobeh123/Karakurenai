@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <!-- Insert shot: the reader in close-up, drawing breath before the first syllable.
+       Drawn for three's SVGLoader. The reading card itself is a textured plane added in code,
+       centred at (1080, 520); shapes in the "front" layer draw over it. The hair, face and robe
+       bleed about 500 units past the top and bottom of the 1600 x 900 sheet, because tall
+       phone screens show more than the sheet's height. -->
+
+  <rect x="0" y="0" width="1600" height="900" fill="#efe3c8"/>
+  <polygon points="1600,0 1600,420 1000,0" fill="#fff6dc" fill-opacity="0.45"/>
+
+  <!-- The hand gripping the card from its left edge: the back of the hand and knuckles show,
+       the fingers pass behind the card, and the wrist runs down into the sleeve -->
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="5" stroke-linejoin="round" d="M962,598 C934,586 896,594 874,622 C852,652 842,700 846,748 C848,790 858,826 872,852 L940,852 C936,812 934,772 944,736 C950,712 958,690 966,672 Z"/>
+  <path fill="#e6bca4" d="M944,736 C936,772 936,812 940,852 L912,852 C908,812 910,770 920,736 C930,712 944,690 958,676 C954,694 948,716 944,736 Z"/>
+  <path fill="none" stroke="#3b2418" stroke-width="3.5" stroke-linecap="round" d="M906,612 C914,626 916,640 912,654 M934,604 C942,616 944,630 940,644 M880,640 C890,652 892,666 886,680"/>
+  <path fill="#c8744f" stroke="#3b2418" stroke-width="5" stroke-linejoin="round" d="M820,1400 L820,900 C826,862 856,836 900,836 C940,836 968,858 976,900 L976,1400 Z"/>
+  <path fill="#f7f2e8" stroke="#3b2418" stroke-width="5" stroke-linejoin="round" d="M858,852 C880,842 918,842 944,852 L940,866 C916,858 884,858 862,866 Z"/>
+
+  <!-- Face, neck, collars and hair, scaled up from the concept sheet's close-up panel -->
+  <g transform="translate(7.2,19.6) scale(2.3)">
+    <path fill="#c8744f" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M-3.1,330 C60,322 140,330 180,345 C222,352 238,370 244,382.8 L292,600 L-3.1,600 Z"/>
+    <path fill="#b5623f" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M150,332 C180,334 210,346 228,362 C240,372 248,380 252,382.8 L308,600 L292,600 L236,382.8 C230,376 214,366 190,356 C176,350 162,346 148,344 Z"/>
+    <path fill="#f7f2e8" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M180,318 C216,322 246,330 264,342 L288,382.8 L345,600 L313,600 L256,382.8 C248,372 226,354 186,344 Z"/>
+    <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M-3.1,-226 L300,-226 C306,-150 318,-60 318,-8.5 C322,24 332,52 336,68 C338,78 332,86 320,88 C310,90 304,94 303,100 C306,106 314,112 314,120 C314,126 308,129 302,130 C306,134 312,138 312,146 C312,154 304,160 300,166 C304,178 310,192 306,204 C300,218 288,226 272,228 C266,236 264,262 262,300 L264,338 C230,326 200,318 180,318 L-3.1,330 Z"/>
+    <path fill="#e6bca4" d="M150,190 C190,212 232,226 272,228 C267,238 265,254 264,270 C228,262 190,244 150,222 Z"/>
+    <path fill="#dc9a8c" fill-opacity="0.7" d="M303,100 C306,106 314,112 314,120 C314,126 308,129 302,130 C298,124 298,108 303,100 Z"/>
+    <path fill="#dc9a8c" fill-opacity="0.7" d="M302,131 C306,134 312,138 312,146 C312,154 304,160 300,166 C296,156 296,140 302,131 Z"/>
+    <path fill="none" stroke="#3b2418" stroke-width="2.4" stroke-linecap="round" d="M302,130.5 C296,131 290,132 284,131"/>
+    <path fill="none" stroke="#3b2418" stroke-width="1.8" stroke-linecap="round" d="M318,80 C314,82 311,82 308,80"/>
+    <path fill="#2a2025" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M-3.1,-226 L312,-226 C300,-160 270,-90 236,-8.5 C228,30 214,82 200,124 C188,158 168,190 146,212 L128,190 L118,222 L-3.1,236 Z"/>
+    <path fill="#54485a" fill-opacity="0.8" d="M190,-226 L240,-226 C225,-120 205,-40 200,-8.5 C190,40 176,90 158,130 C168,84 176,34 170,-8.5 C175,-60 185,-140 190,-226 Z"/>
+  </g>
+
+  <!-- The thumb reaching over the card's face from the hand, in front of the card -->
+  <g data-layer="front">
+    <path fill="#f6dfcc" stroke="#3b2418" stroke-width="5" stroke-linejoin="round" d="M930,640 C946,622 972,610 1000,606 C1016,604 1026,614 1020,626 C1014,638 998,644 982,648 C964,654 948,662 936,672 Z"/>
+    <path fill="none" stroke="#c98f7c" stroke-width="3" stroke-linecap="round" d="M1004,612 C1012,612 1016,618 1014,624"/>
+  </g>
+
+  <!-- The breath, drawn in as the reader inhales -->
+  <g data-layer="breath" transform="translate(7.2,19.6) scale(2.3)">
+    <path fill="none" stroke="#b9a9d6" stroke-width="2" stroke-linecap="round" d="M332,126 C346,122 356,126 364,120 M336,140 C352,138 360,142 372,136"/>
+  </g>
+</svg>

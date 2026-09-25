@@ -7,6 +7,7 @@ export const FX_LAYER = 1;
 const COLOR_SAMPLES = 4;
 const LINE_WIDTH = 1;
 const INK_COLOR = '#3b2418';
+const INK_STRENGTH = 0.85;
 const PAPER_COLOR = '#fbf4e4';
 const ACCENT_COLOR = '#b3122e';
 
@@ -132,7 +133,7 @@ export function createPostPass(renderer, scene, camera) {
     cameraFar: { value: camera.far },
     lineWidth: { value: LINE_WIDTH },
     inkColor: { value: new THREE.Color(INK_COLOR) },
-    inkStrength: { value: 0.85 },
+    inkStrength: { value: INK_STRENGTH },
     time: { value: 0 },
     grainAmount: { value: 0.035 },
     vignetteAmount: { value: 0.22 },
@@ -167,21 +168,26 @@ export function createPostPass(renderer, scene, camera) {
     uniforms.lineWidth.value = LINE_WIDTH * pixelRatio;
   }
 
-  function render(time) {
+  // view picks what to draw: the 3D hall by default, or an insert shot. Insert art carries its
+  // own ink lines, so for inserts (ink: false) the normal pass is skipped and no lines are added.
+  function render(time, view = { scene, camera, ink: true }) {
     renderer.shadowMap.needsUpdate = true;
     renderer.setRenderTarget(colorTarget);
-    renderer.render(scene, camera);
+    renderer.render(view.scene, view.camera);
 
-    camera.layers.disable(FX_LAYER);
-    scene.overrideMaterial = normalMaterial;
-    renderer.setRenderTarget(normalTarget);
-    renderer.render(scene, camera);
-    scene.overrideMaterial = null;
-    camera.layers.enable(FX_LAYER);
+    if (view.ink) {
+      view.camera.layers.disable(FX_LAYER);
+      view.scene.overrideMaterial = normalMaterial;
+      renderer.setRenderTarget(normalTarget);
+      renderer.render(view.scene, view.camera);
+      view.scene.overrideMaterial = null;
+      view.camera.layers.enable(FX_LAYER);
+      uniforms.cameraNear.value = view.camera.near;
+      uniforms.cameraFar.value = view.camera.far;
+    }
 
+    uniforms.inkStrength.value = view.ink ? INK_STRENGTH : 0;
     uniforms.time.value = time;
-    uniforms.cameraNear.value = camera.near;
-    uniforms.cameraFar.value = camera.far;
     renderer.setRenderTarget(null);
     renderer.render(compositeScene, compositeCamera);
   }

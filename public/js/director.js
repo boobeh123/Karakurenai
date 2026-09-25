@@ -10,8 +10,21 @@ const TWOS_FPS = 12;
 const COMPOSED_ASPECT = 16 / 9;
 const MAX_FOV_STRETCH = 2.2;
 
+// Moments in the eyes insert, in seconds from its start: closed, one half-open in-between
+// (a single drawing on twos), then open, then a glint of resolve
+const EYES = {
+  halfOpen: 0.5,
+  open: 0.5 + 1 / TWOS_FPS,
+  glint: 0.95,
+};
+
+// The breath is drawn in just after the breath cue sounds
+const BREATH_WISPS_DELAY = 0.25;
+
 // Moments in the sweep shot, in seconds from its start
 const SWEEP = {
+  // The player's hand appears at the ready, then leads the smear
+  handStart: 0.16,
   smearStart: 0.25,
   contact: 0.34,
   // Held for two frames of 24 fps film, as a drawn impact frame would be
@@ -51,6 +64,17 @@ function pose(position, target, fov) {
   return { position, target, fov };
 }
 
+// A slow camera move across a flat insert drawing
+function sheetMove(zoom, panX = 0, panY = 0) {
+  return { zoom, panX, panY };
+}
+
+function getEyesDrawing(eyesTime) {
+  if (eyesTime < EYES.halfOpen) return 'closed';
+  if (eyesTime < EYES.open) return 'half';
+  return 'open';
+}
+
 export function fitFieldOfView(fov, aspect) {
   if (aspect >= COMPOSED_ASPECT) return fov;
   const stretch = Math.min(COMPOSED_ASPECT / aspect, MAX_FOV_STRETCH);
@@ -69,28 +93,27 @@ export function createDirector({ heroPosition, readerPosition }) {
 
   const shots = [
     {
-      // Crane down over the match, the reader kneeling at the side
+      // Crane down over the match, ending on the reader kneeling beside the board, with the
+      // window light behind
       name: 'hall',
       start: 0,
       end: 4.5,
-      from: pose(new THREE.Vector3(45, 150, 200), new THREE.Vector3(-20, 0, -10), 40),
-      to: pose(new THREE.Vector3(30, 70, 125), new THREE.Vector3(-15, 6, -5), 36),
+      from: pose(new THREE.Vector3(45, 170, 215), new THREE.Vector3(-25, 0, -15), 42),
+      to: pose(new THREE.Vector3(40, 75, 165), new THREE.Vector3(-30, 38, -20), 38),
     },
     {
-      // The room holds its breath. Feature 2b turns this into the reader close-up insert.
+      // Insert: the reader in close-up, drawing breath before the first syllable
       name: 'breath',
       start: 4.5,
       end: 6,
-      from: pose(near(hero, 14, 22, 35), near(hero, 0, 0, -2), 32),
-      to: pose(near(hero, 10, 16, 25), near(hero, 0, 0, -2), 32),
+      insert: { name: 'readerBreath', from: sheetMove(1), to: sheetMove(1.06, 30, -10) },
     },
     {
-      // Feature 2b turns this into the player's eyes insert
+      // Insert: the player's eyes opening
       name: 'eyes',
       start: 6,
       end: 7.5,
-      from: pose(near(hero, -22, 10, 17), hero.clone(), 30),
-      to: pose(near(hero, -16, 9, 13), hero.clone(), 30),
+      insert: { name: 'playerEyes', from: sheetMove(1), to: sheetMove(1.1) },
     },
     {
       // Low across the hero card toward the reader as the first syllable sounds
@@ -112,6 +135,8 @@ export function createDirector({ heroPosition, readerPosition }) {
 
   const sweepStart = shots.find((shot) => shot.name === 'sweep').start;
   const syllableStart = shots.find((shot) => shot.name === 'syllable').start;
+  const breathShot = shots.find((shot) => shot.name === 'breath');
+  const eyesStart = shots.find((shot) => shot.name === 'eyes').start;
 
   // Sounds fire once, as the sequence passes their time
   const cues = [
@@ -123,12 +148,24 @@ export function createDirector({ heroPosition, readerPosition }) {
 
   const camera = pose(new THREE.Vector3(), new THREE.Vector3(), 35);
 
+  // An insert shot returns its sheet move instead of a 3D camera pose
   function getFrame(time, { reducedMotion }) {
     const shot = shots.find(({ start, end }) => time >= start && time < end) ?? shots[shots.length - 1];
     const blend = easeInOutSine(getProgress(time, shot.start, shot.end));
-    camera.position.lerpVectors(shot.from.position, shot.to.position, blend);
-    camera.target.lerpVectors(shot.from.target, shot.to.target, blend);
-    camera.fov = THREE.MathUtils.lerp(shot.from.fov, shot.to.fov, blend);
+    let insert = null;
+    if (shot.insert) {
+      const { name, from, to } = shot.insert;
+      insert = {
+        name,
+        zoom: THREE.MathUtils.lerp(from.zoom, to.zoom, blend),
+        panX: THREE.MathUtils.lerp(from.panX, to.panX, blend),
+        panY: THREE.MathUtils.lerp(from.panY, to.panY, blend),
+      };
+    } else {
+      camera.position.lerpVectors(shot.from.position, shot.to.position, blend);
+      camera.target.lerpVectors(shot.from.target, shot.to.target, blend);
+      camera.fov = THREE.MathUtils.lerp(shot.from.fov, shot.to.fov, blend);
+    }
 
     const drawnTime = onTwos(time);
     const sweepTime = time - sweepStart;
@@ -154,9 +191,15 @@ export function createDirector({ heroPosition, readerPosition }) {
       ring: getProgress(drawnTime, syllableStart + 0.1, syllableStart + 1.5),
       syllable: time >= syllableStart + 0.1 && time < syllableStart + 1.4,
       musicDucked: time >= 4.4,
+      breathWisps: time >= breathShot.start + BREATH_WISPS_DELAY,
+      eyes: getEyesDrawing(drawnTime - eyesStart),
+      glint: drawnTime - eyesStart >= EYES.glint,
+      // The hand waits at the ready, then rides the smear's leading edge (on ones)
+      handVisible: sweepTime >= SWEEP.handStart && sweepTime < SWEEP.contact,
+      handAlong: Math.min(1, getProgress(sweepTime, SWEEP.smearStart, SWEEP.contact) * 1.2),
     };
 
-    return { shot, camera, fx, drawnTime };
+    return { shot, insert, camera, fx, drawnTime };
   }
 
   // Names of cues passed between two times; the second time may have wrapped past the loop end

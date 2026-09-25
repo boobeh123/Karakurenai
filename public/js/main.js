@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createInsertShots } from './celArt.js';
 import { createDirector, fitFieldOfView, LOOP_SECONDS } from './director.js';
 import { createKarutaHall } from './karutaHall.js';
 import { createPostPass } from './postPass.js';
@@ -24,6 +25,7 @@ let renderer = null;
 let scene = null;
 let camera = null;
 let hall = null;
+let inserts = null;
 let director = null;
 let postPass = null;
 let isPlaying = !reducedMotionQuery.matches;
@@ -123,12 +125,21 @@ function renderFrame() {
   const loopTime = sceneTime % LOOP_SECONDS;
   const frame = director.getFrame(loopTime, { reducedMotion: reducedMotionQuery.matches });
 
-  updateCamera(frame);
-  hall.update({ time: sceneTime, drawnTime: frame.drawnTime, fx: frame.fx, pointScale: getPointScale() });
+  // Insert shots are flat drawings with their own camera; the 3D camera holds still meanwhile
+  if (!frame.insert) {
+    updateCamera(frame);
+  }
+  hall.update({
+    time: sceneTime,
+    drawnTime: frame.drawnTime,
+    fx: frame.fx,
+    pointScale: getPointScale(),
+    cameraPosition: camera.position,
+  });
   updateEffects(frame);
   updateSound(frame, loopTime);
   previousLoopTime = loopTime;
-  postPass.render(sceneTime);
+  postPass.render(sceneTime, frame.insert ? inserts.getView(frame, camera.aspect) : undefined);
 }
 
 function animate(now) {
@@ -228,7 +239,9 @@ async function init() {
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(35, 1, 1, 2000);
-    hall = await createKarutaHall({ maxAnisotropy: renderer.capabilities.getMaxAnisotropy() });
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+    hall = await createKarutaHall({ maxAnisotropy });
+    inserts = await createInsertShots({ maxAnisotropy });
     scene.add(hall.group);
     scene.background = hall.background;
     director = createDirector({ heroPosition: hall.heroRestPosition, readerPosition: hall.readerPosition });

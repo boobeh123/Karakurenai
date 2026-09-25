@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <!-- Insert shot: the player's eyes opening, in an extreme close-up strip. Drawn for three's
+       SVGLoader, so the iris uses flat cel bands instead of a gradient, and nothing is clipped:
+       the lids and lashes cover whatever should not show. The "closed", "half" and "open"
+       layers are the three drawings of the blink; code shows one at a time. The black behind
+       the strip is the scene background. -->
+  <g transform="translate(0,86) scale(3.6364)">
+    <rect x="0" y="0" width="440" height="200" fill="#f6dfcc"/>
+    <rect x="0" y="0" width="440" height="60" fill="#e8c3ab" fill-opacity="0.7"/>
+
+    <!-- Eye bases: white, iris bands, pupil, lower lid, brow. Right eye, then the left mirrored. -->
+    <g transform="translate(315,112)">
+      <path fill="#fbf8f4" d="M-62,8 C-45,-30 20,-44 60,-14 C66,-8 68,0 64,6 C40,34 -30,40 -62,8 Z"/>
+      <path fill="#d6cbe6" d="M-62,8 C-45,-30 20,-44 60,-14 C64,-10 66,-6 66,-2 C30,-24 -30,-18 -60,14 Z"/>
+      <ellipse cx="-2" cy="-2" rx="28" ry="32" fill="#b3122e"/>
+      <path fill="#3a0d16" d="M-30,-2 A28,32 0 0 1 26,-2 C14,-12 -18,-12 -30,-2 Z"/>
+      <path fill="#f2a066" fill-opacity="0.85" d="M-22,16 C-10,28 8,28 20,16 C10,22 -10,22 -22,16 Z"/>
+      <ellipse cx="-2" cy="0" rx="11" ry="15" fill="#12060a"/>
+      <ellipse cx="-2" cy="-2" rx="28" ry="32" fill="none" stroke="#1f0a0e" stroke-width="2.5"/>
+      <path fill="none" stroke="#8a5a48" stroke-width="2" stroke-linecap="round" d="M-40,31 C-10,41 30,36 58,15"/>
+      <path fill="#3a2a2a" d="M-58,-68 C-20,-84 30,-82 68,-62 C30,-76 -20,-78 -56,-62 Z"/>
+    </g>
+    <g transform="translate(125,112) scale(-1,1)">
+      <path fill="#fbf8f4" d="M-62,8 C-45,-30 20,-44 60,-14 C66,-8 68,0 64,6 C40,34 -30,40 -62,8 Z"/>
+      <path fill="#d6cbe6" d="M-62,8 C-45,-30 20,-44 60,-14 C64,-10 66,-6 66,-2 C30,-24 -30,-18 -60,14 Z"/>
+      <ellipse cx="-2" cy="-2" rx="28" ry="32" fill="#b3122e"/>
+      <path fill="#3a0d16" d="M-30,-2 A28,32 0 0 1 26,-2 C14,-12 -18,-12 -30,-2 Z"/>
+      <path fill="#f2a066" fill-opacity="0.85" d="M-22,16 C-10,28 8,28 20,16 C10,22 -10,22 -22,16 Z"/>
+      <ellipse cx="-2" cy="0" rx="11" ry="15" fill="#12060a"/>
+      <ellipse cx="-2" cy="-2" rx="28" ry="32" fill="none" stroke="#1f0a0e" stroke-width="2.5"/>
+      <path fill="none" stroke="#8a5a48" stroke-width="2" stroke-linecap="round" d="M-40,31 C-10,41 30,36 58,15"/>
+      <path fill="#3a2a2a" d="M-58,-68 C-20,-84 30,-82 68,-62 C30,-76 -20,-78 -56,-62 Z"/>
+    </g>
+
+    <!-- Open: highlights (the same side on both eyes), upper lash lines and creases -->
+    <g data-layer="open">
+      <ellipse cx="301" cy="96" rx="9" ry="12" fill="#ffffff"/>
+      <circle cx="325" cy="124" r="4" fill="#ffffff"/>
+      <circle cx="331" cy="100" r="2" fill="#ffffff"/>
+      <ellipse cx="115" cy="96" rx="9" ry="12" fill="#ffffff"/>
+      <circle cx="139" cy="124" r="4" fill="#ffffff"/>
+      <circle cx="145" cy="100" r="2" fill="#ffffff"/>
+      <g transform="translate(315,112)">
+        <path fill="#2a1c1f" d="M-66,10 C-50,-34 22,-50 64,-16 C70,-11 74,-9 82,-16 C77,-4 70,2 64,5 C42,-30 -22,-38 -60,9 Z"/>
+        <path fill="#2a1c1f" d="M56,-22 L84,-30 L68,-12 Z"/>
+        <path fill="none" stroke="#8a5a48" stroke-width="1.6" stroke-linecap="round" d="M-48,-30 C-18,-52 30,-52 62,-30"/>
+      </g>
+      <g transform="translate(125,112) scale(-1,1)">
+        <path fill="#2a1c1f" d="M-66,10 C-50,-34 22,-50 64,-16 C70,-11 74,-9 82,-16 C77,-4 70,2 64,5 C42,-30 -22,-38 -60,9 Z"/>
+        <path fill="#2a1c1f" d="M56,-22 L84,-30 L68,-12 Z"/>
+        <path fill="none" stroke="#8a5a48" stroke-width="1.6" stroke-linecap="round" d="M-48,-30 C-18,-52 30,-52 62,-30"/>
+      </g>
+    </g>
+
+    <!-- Half open: the upper lids come down to just above the pupils -->
+    <g data-layer="half">
+      <g transform="translate(315,112)">
+        <path fill="#f6dfcc" d="M-68,10 C-52,-40 22,-56 68,-18 L66,6 C30,-6 -30,-6 -64,10 Z"/>
+        <path fill="#2a1c1f" d="M-66,12 C-30,-4 30,-4 66,6 C71,4 76,1 82,-4 C77,8 71,12 64,13 C30,5 -30,5 -60,16 Z"/>
+        <path fill="none" stroke="#8a5a48" stroke-width="1.6" stroke-linecap="round" d="M-50,-22 C-18,-42 30,-42 62,-22"/>
+      </g>
+      <g transform="translate(125,112) scale(-1,1)">
+        <path fill="#f6dfcc" d="M-68,10 C-52,-40 22,-56 68,-18 L66,6 C30,-6 -30,-6 -64,10 Z"/>
+        <path fill="#2a1c1f" d="M-66,12 C-30,-4 30,-4 66,6 C71,4 76,1 82,-4 C77,8 71,12 64,13 C30,5 -30,5 -60,16 Z"/>
+        <path fill="none" stroke="#8a5a48" stroke-width="1.6" stroke-linecap="round" d="M-50,-22 C-18,-42 30,-42 62,-22"/>
+      </g>
+    </g>
+
+    <!-- Closed: the lids cover each eye, lashes along a downward arc -->
+    <g data-layer="closed">
+      <g transform="translate(315,112)">
+        <path fill="#f6dfcc" d="M-68,10 C-52,-40 22,-56 68,-18 L66,6 C40,36 -30,42 -64,10 Z"/>
+        <path fill="none" stroke="#2a1c1f" stroke-width="5" stroke-linecap="round" d="M-60,12 C-28,32 34,30 64,8"/>
+        <path fill="none" stroke="#2a1c1f" stroke-width="3" stroke-linecap="round" d="M52,20 L60,31 M60,14 L73,21"/>
+        <path fill="none" stroke="#8a5a48" stroke-width="1.6" stroke-linecap="round" d="M-46,-12 C-16,-30 30,-30 60,-14"/>
+      </g>
+      <g transform="translate(125,112) scale(-1,1)">
+        <path fill="#f6dfcc" d="M-68,10 C-52,-40 22,-56 68,-18 L66,6 C40,36 -30,42 -64,10 Z"/>
+        <path fill="none" stroke="#2a1c1f" stroke-width="5" stroke-linecap="round" d="M-60,12 C-28,32 34,30 64,8"/>
+        <path fill="none" stroke="#2a1c1f" stroke-width="3" stroke-linecap="round" d="M52,20 L60,31 M60,14 L73,21"/>
+        <path fill="none" stroke="#8a5a48" stroke-width="1.6" stroke-linecap="round" d="M-46,-12 C-16,-30 30,-30 60,-14"/>
+      </g>
+    </g>
+
+    <!-- A glint of resolve after the eyes open -->
+    <g data-layer="glint">
+      <path fill="#ffffff" d="M322,84 L324.5,91.5 L332,94 L324.5,96.5 L322,104 L319.5,96.5 L312,94 L319.5,91.5 Z"/>
+      <path fill="#ffffff" d="M136,84 L138.5,91.5 L146,94 L138.5,96.5 L136,104 L133.5,96.5 L126,94 L133.5,91.5 Z"/>
+    </g>
+
+    <!-- Hair falling across the frame, drawn over everything -->
+    <path fill="#2a2025" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M196,0 C206,40 212,90 202,150 C218,100 224,44 236,0 Z"/>
+    <path fill="#2a2025" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M70,0 C58,34 40,66 14,92 C48,72 72,40 104,0 Z"/>
+    <path fill="#2a2025" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M388,0 C396,40 410,80 440,110 L440,0 Z"/>
+    <path fill="none" stroke="#54485a" stroke-width="2" stroke-linecap="round" d="M210,10 C216,50 216,90 208,130"/>
+    <path fill="#2a2025" d="M0,60 C10,50 20,30 30,0 L0,0 Z"/>
+  </g>
+</svg>

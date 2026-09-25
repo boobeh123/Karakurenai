@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="66 106 170 64">
+  <!-- The player's hand in side view, fingers together and pointing right, with the cuff of a
+       white sleeve. Drawn for three's SVGLoader. The fingertips sit near (200, 140). -->
+  <path fill="#f7f2e8" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M70,110 C78,112 86,114 92,118 L92,158 C86,160 78,162 70,163 Z"/>
+  <path fill="#d8cfe6" d="M70,152 C78,152 86,151 92,150 L92,158 C86,160 78,162 70,163 Z"/>
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M88,124 C110,116 140,114 165,120 C185,124 205,130 222,140 C229,144 232,151 225,155 C205,154 180,150 160,150 C150,156 140,166 128,168 C120,166 116,160 118,154 C108,154 96,154 88,152 Z"/>
+  <path fill="#e6bca4" d="M92,150 C110,151 140,150 160,150 C180,150 205,154 225,155 C218,158 190,158 160,156 C140,160 118,160 92,156 Z"/>
+  <path fill="none" stroke="#3b2418" stroke-width="1.4" stroke-linecap="round" d="M162,134 C185,138 205,144 222,149 M166,127 C190,131 210,137 224,145 M150,118 C152,126 152,136 150,146"/>
+  <path fill="none" stroke="#c98f7c" stroke-width="1.4" d="M218,146 C222,146 225,149 224,152"/>
+</svg>

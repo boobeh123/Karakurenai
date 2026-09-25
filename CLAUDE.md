@@ -36,7 +36,8 @@ Vite warns that the bundle is over 500 kB. That's expected, because three.js mak
 - **Dev jump:** on the dev server only, `?t=8` opens the sequence paused at 8 seconds, so a single frame can be inspected. Production builds strip it via `import.meta.env.DEV`.
 
 **Sequence (`director.js`).**
-- **Pure function of time:** `getFrame(loopTime, { reducedMotion })` returns the camera pose and a flat `fx` object: smear, impact, shake, speed lines, card flight, skid, sparkles, sound ring, the 「ち」 flag, and music ducking.
+- **Pure function of time:** `getFrame(loopTime, { reducedMotion })` returns the camera pose and a flat `fx` object. The `fx` values cover the smear, impact, shake, speed lines, card flight, skid, sparkles, sound ring, the 「ち」 flag, music ducking, and the character states (breath wisps, the eyes' drawing, the glint, and the hand).
+- **Insert shots:** these have an `insert` (a name plus zoom and pan) instead of 3D poses. `getFrame` then returns `insert`, and `main.js` renders that insert while the 3D camera holds still.
 - **Shot list:** data-driven. Positions are relative to the hero card's rest position and the reader's position, both passed in from the hall, so moving either one keeps the camera work intact.
 - **On twos:** drawn motion (card flight, skid, dust, rings, sparkles) is computed from `drawnTime`, which is stepped to 12 fps. The camera and the smear and impact frames run on ones.
 - **Reduced motion:** the director zeroes the impact flash, speed lines, and camera shake when `reducedMotion` is set.
@@ -49,7 +50,7 @@ Vite warns that the bundle is over 500 kB. That's expected, because three.js mak
 3. A full-screen composite shader. It draws ink lines where the Laplacian of 1/depth spikes (silhouettes) or normals change (creases). It then applies the impact frame (a two-tone paper-and-ink picture with crimson lines, set by the `impact` uniform), speed lines radiating from `speedCenter`, a vignette, and film grain, and converts to sRGB through `#include <colorspace_fragment>`.
 
 Things to know when adding to the scene:
-- **`FX_LAYER`:** effects (light beams, dust, sound rings, the smear, sparkles) must call `mesh.layers.set(FX_LAYER)`. That keeps them out of the normal pass, so they don't get ink outlines. Flat character cutouts belong there too, since the art has its own lines.
+- **`FX_LAYER`:** effects (light beams, dust, sound rings, the smear, sparkles) must call `mesh.layers.set(FX_LAYER)`. That keeps them out of the normal pass, so they don't get ink outlines. Character cutouts must *not* go on it. Anything missing from the normal pass is invisible to the edge detector, so the floor's lines get inked straight through the character.
 - **Shadows:** `shadowMap.autoUpdate` is off, and `render()` refreshes the shadow map once per frame during the color pass. Moving objects still get correct shadows.
 - **Stray ink:** the edge detector inks any hairline crack or edge-on face. Boxes that merely touch, or coplanar seams, show up as dotted lines. Overlap the geometry slightly, or put a matching surface just behind it. The window wall's side pieces and the tatami underlay in `karutaHall.js` both do this.
 
@@ -59,7 +60,14 @@ Things to know when adding to the scene:
 - **Sun and beams:** `SUN_DIRECTION` drives both the directional light and the light-beam shader. The beam shader traces each point back to the lattice plane to cut the shafts into bands, so the window, lattice, and sun constants must stay consistent. Dust motes are also placed along rays from the window.
 - **Board lighting:** `WINDOW.bottom` (48) is chosen so the lattice's horizontal-bar shadows fall just outside the board's rows. At 40, a bar shadow lay across the hero card's row.
 - **Cards:** cards come from `TERRITORY_ROWS`, a mid-match layout with 12 cards per side. The No. 17 hero card sits at `HERO_SLOT`. `update()` resets the hero card and its skidding neighbours to their rest transforms whenever `fx.flight` and `fx.skid` are 0, so each loop starts clean.
-- **Interface:** `createKarutaHall()` is async, because it waits for the card font. It returns `{ group, cards, heroCard, heroRestPosition, readerPosition, background, update({ time, drawnTime, fx, pointScale }) }`. `pointScale` converts centimetres to pixels for the point-sprite effects.
+- **Interface:** `createKarutaHall()` is async, because it waits for the card font. It returns `{ group, cards, heroCard, heroRestPosition, readerPosition, background, update({ time, drawnTime, fx, pointScale, cameraPosition }) }`. `pointScale` converts centimetres to pixels for the point-sprite effects, and `cameraPosition` turns the character cutouts to face the camera.
+
+**Characters (`celArt.js`, `public/art/*.svg`).**
+- **SVG source:** the characters are SVG drawings, imported as strings with Vite's `?raw` suffix and turned into flat, unlit meshes by three's `SVGLoader`, one mesh per fill and per stroke. SVGLoader handles only fills, strokes, transforms and opacity. Draw without gradients, clip paths, `<use>`, or `<text>`: the iris uses flat cel bands, and the eye lids simply cover what shouldn't show.
+- **Layering:** each shape sits `Z_STEP` in front of the one before, and meshes write depth. So a drawing layers in document order, and a cutout hides what's behind it like a solid object. `<g data-layer="front">` jumps forward by `FRONT_Z`, which lets the reading card's textured plane sit between the art's back and front.
+- **Swappable drawings:** `<g data-layer="name">` groups can be toggled with `setLayerVisible()`. The eyes use `closed`, `half`, and `open`, the three drawings of the blink, plus `glint`. The breath insert uses `breath`.
+- **In the hall:** `createCutout()` places a drawing in the room. SVG y runs down, so the art is flipped, and an anchor point in SVG units lands on the cutout's origin. `karutaHall.js` turns each cutout around the vertical axis every frame to face the camera. The reader is life-size, about 90 cm kneeling, and casts a shadow. The hand is drawn at about 10 cm instead of life size, because the sweep camera sits a hand's length from the cards.
+- **Inserts:** `createInsertShots()` builds the full-screen 2D cuts (`readerBreath`, `playerEyes`), each with its own scene and orthographic camera. `postPass.render(time, view)` draws them without the ink pass. Each is drawn on a 1600 × 900 sheet with a `FOCUS` band. Narrow screens crop the sides down to that band, then show space above and below, so insert art must bleed past the sheet's top and bottom (the breath art bleeds about 500 units) or end on the scene background colour.
 
 **Materials and text (`materials.js`, `poems.js`).**
 - **Materials:** all scene materials go through `createToonMaterial`, which shares one 3-step gradient map. The lavender hemisphere light provides the tinted shadows.
@@ -88,12 +96,12 @@ Things to know when adding to the scene:
 Built:
 - **Feature 1:** the karuta hall, plus the soundscape.
 - **Feature 2a:** the 11-second match sequence. Its shots are the hall, breath, eyes, syllable, and sweep, with effects and sound cues.
+- **Feature 2b:** the characters.
+  - The reader (Claude, in a clay-orange haori) kneels beside the board, and the establishing shot ends on them.
+  - The `breath` and `eyes` shots are full-screen inserts.
+  - The player's hand waits at the ready, then leads the smear.
 
 Planned, not yet written:
-- **Feature 2b, the characters:** original art in flat cel colours, loaded as vectors with three's `SVGLoader`. It is authored without gradients, clip paths, or text, which SVGLoader doesn't support.
-  - The reader (Claude, in a clay-orange haori) kneels at `readerPosition` as a flat cutout in the hall.
-  - The `breath` and `eyes` shots, currently 3D placeholders, become full-screen 2D inserts: the reader's close-up and the player's eyes opening.
-  - The player's hand is added at the head of the smear.
 - **Feature 3, `tatsutaRiver.js`:** a cel-shaded water shader with crimson dye spreading from the card, plus instanced maple leaves. The full poem is written vertically as DOM text, with an English translation. The loop extends to about 24 seconds.
 
 ## Visual verification

@@ -95,46 +95,69 @@ export async function loadCardFont(sampleText) {
   }
 }
 
-export function createCardFaceTexture({ lowerVerse, width, maxAnisotropy }) {
-  const height = Math.round(width * CARD_ASPECT);
-  const canvas = createCanvas(width, height);
-  const context = canvas.getContext('2d');
+// Blank card: the green backing paper folds over the edges and frames the face
+function paintBlankCard(context, width, height) {
   const border = width * 0.035;
-  const innerHeight = height - border * 2;
-
-  // The green backing paper folds over the edges and frames the face
   context.fillStyle = CARD_BORDER_COLOR;
   context.fillRect(0, 0, width, height);
   context.fillStyle = CARD_PAPER_COLOR;
-  context.fillRect(border, border, width - border * 2, innerHeight);
+  context.fillRect(border, border, width - border * 2, height - border * 2);
 
   // Faint paper fibres
   context.fillStyle = 'rgba(120, 100, 60, 0.06)';
   Array.from({ length: width }).forEach(() => {
     const x = border + Math.random() * (width - border * 2);
-    const y = border + Math.random() * innerHeight;
+    const y = border + Math.random() * (height - border * 2);
     context.fillRect(x, y, 1 + Math.random() * width * 0.01, 1);
   });
+  return border;
+}
 
-  // Three vertical columns, read right to left; later columns start a little lower,
-  // like hand-lettered cards
-  const columns = splitIntoColumns([...getTorifudaText(lowerVerse)], 3);
-  const longestColumn = Math.max(...columns.map((column) => column.length));
-  const fontSize = Math.min((innerHeight * 0.78) / longestColumn, width * 0.23);
+// Three vertical columns, read right to left; later columns start a little lower,
+// like hand-lettered cards
+function paintColumns(context, columns, { width, top, fontSize }) {
   const columnX = [0.77, 0.5, 0.23].map((fraction) => fraction * width);
-  const top = border + innerHeight * 0.06 + fontSize / 2;
-
   context.font = `${fontSize}px ${CARD_FONT_FAMILY}`;
   context.fillStyle = CARD_INK_COLOR;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
 
   columns.forEach((column, columnIndex) => {
-    const columnTop = top + columnIndex * fontSize * 0.25;
+    const columnTop = top + fontSize / 2 + columnIndex * fontSize * 0.25;
     column.forEach((character, characterIndex) => {
       context.fillText(character, columnX[columnIndex], columnTop + characterIndex * fontSize);
     });
   });
+}
+
+export function createCardFaceTexture({ lowerVerse, width, maxAnisotropy }) {
+  const height = Math.round(width * CARD_ASPECT);
+  const canvas = createCanvas(width, height);
+  const context = canvas.getContext('2d');
+  const border = paintBlankCard(context, width, height);
+  const innerHeight = height - border * 2;
+
+  const columns = splitIntoColumns([...getTorifudaText(lowerVerse)], 3);
+  const longestColumn = Math.max(...columns.map((column) => column.length));
+  const fontSize = Math.min((innerHeight * 0.78) / longestColumn, width * 0.23);
+  paintColumns(context, columns, { width, top: border + innerHeight * 0.06, fontSize });
+
+  return createCanvasTexture(canvas, maxAnisotropy);
+}
+
+// The reader's card (yomifuda) carries the whole poem in kanji and kana. Only its opening
+// lines are painted; the insert shows the card up close.
+export async function createReadingCardTexture({ lines, width, height, maxAnisotropy }) {
+  await loadCardFont(lines.join(''));
+  const canvas = createCanvas(width, height);
+  const context = canvas.getContext('2d');
+  const border = paintBlankCard(context, width, height);
+  const innerHeight = height - border * 2;
+
+  const columns = lines.map((line) => [...line]);
+  const longestColumn = Math.max(...columns.map((column) => column.length));
+  const fontSize = Math.min((innerHeight * 0.8) / (longestColumn + 0.5), width * 0.2);
+  paintColumns(context, columns, { width, top: border + innerHeight * 0.05, fontSize });
 
   return createCanvasTexture(canvas, maxAnisotropy);
 }

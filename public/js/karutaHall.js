@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import playerHandSvg from '../art/playerHand.svg?raw';
+import readerSvg from '../art/reader.svg?raw';
+import { createCutout } from './celArt.js';
 import {
   createCardFaceTexture,
   createSeededRandom,
@@ -65,6 +68,17 @@ const HERO_SLOT = { side: 'player', rowIndex: 1, index: 1 };
 
 // The reader kneels beside the board on the centre line, facing it
 const READER_POSITION = new THREE.Vector3(-80, 0, 0);
+
+// Character cutouts, in SVG units: the point of the drawing that lands on the cutout's
+// origin, and centimetres per SVG unit. The reader kneels about 90 cm tall. The hand is
+// drawn smaller than life (about 10 cm): the sweep shot's lens is only a hand's length from
+// the cards, where a true-size hand would fill the screen.
+const READER_ART = { anchor: [255, 660], scale: 0.169 };
+const HAND_ART = { anchor: [200, 140], scale: 0.07, lift: 2.5 };
+
+// The path of the sweep across the player's cards, from the player's right to left. It starts
+// inside the sweep shot's frame, so the hand is seen at the ready.
+const SWEEP_PATH = [new THREE.Vector3(1, 2.5, 20), new THREE.Vector3(-8, 4, 16), new THREE.Vector3(-26, 3, 8)];
 
 // The swept card arcs up toward the camera and tumbles end over end
 const FLIGHT_CONTROL = new THREE.Vector3(1, 15, 4);
@@ -411,14 +425,9 @@ function createSoundRings() {
   });
 }
 
-// Smear frame: the sweeping hand stretched into a streaked ribbon along its path.
-// Feature 2b draws the hand itself at the ribbon's head.
-function createSmear() {
-  const curve = new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(16, 2.5, 24),
-    new THREE.Vector3(-2, 4, 18),
-    new THREE.Vector3(-26, 3, 8)
-  );
+// Smear frame: the sweeping hand stretched into a streaked ribbon along its path, with the
+// hand cutout riding its head
+function createSmear(curve) {
   const segments = 40;
   const positions = [];
   const uvs = [];
@@ -603,10 +612,20 @@ export async function createKarutaHall({ maxAnisotropy }) {
   const baseBeamOpacity = beams.material.uniforms.opacity.value;
   const dust = createDust(random);
   const rings = createSoundRings();
-  const smear = createSmear();
+  const sweepCurve = new THREE.QuadraticBezierCurve3(...SWEEP_PATH);
+  const smear = createSmear(sweepCurve);
   const { sparkles, offsets: sparkleOffsets } = createSparkles(random);
 
+  // Characters are flat cels standing in the room; the reader casts a shadow on the tatami
+  const reader = createCutout(readerSvg, { ...READER_ART, castShadow: true });
+  reader.position.copy(READER_POSITION);
+  // Mirrored so the fingers lead the sweep toward the player's left
+  const hand = createCutout(playerHandSvg, { ...HAND_ART, mirror: true });
+  hand.visible = false;
+
   group.add(
+    reader,
+    hand,
     createFloor(maxAnisotropy),
     createWindowWall(),
     createSideWalls(),
@@ -686,12 +705,28 @@ export async function createKarutaHall({ maxAnisotropy }) {
     sparkles.material.uniforms.pointScale.value = pointScale;
   }
 
+  // Cels always face the camera, turning only around the vertical axis so they stay upright
+  function faceCamera(cutout, cameraPosition) {
+    cutout.rotation.y = Math.atan2(cameraPosition.x - cutout.position.x, cameraPosition.z - cutout.position.z);
+  }
+
+  function updateCharacters(fx, cameraPosition) {
+    faceCamera(reader, cameraPosition);
+    hand.visible = fx.handVisible;
+    if (fx.handVisible) {
+      hand.position.copy(sweepCurve.getPoint(fx.handAlong));
+      hand.position.y += HAND_ART.lift;
+      faceCamera(hand, cameraPosition);
+    }
+  }
+
   // time drives smooth light changes; drawnTime (stepped on twos) drives drawn motion
-  function update({ time, drawnTime, fx, pointScale }) {
+  function update({ time, drawnTime, fx, pointScale, cameraPosition }) {
     // A slow breath in the light, as if thin clouds pass the sun
     beams.material.uniforms.opacity.value = baseBeamOpacity * (0.85 + 0.15 * Math.sin(time * 0.6));
     updateCards(fx);
     updateEffects(fx, drawnTime, pointScale);
+    updateCharacters(fx, cameraPosition);
   }
 
   return {

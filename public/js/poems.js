@@ -29,3 +29,6 @@ export const POEMS = [
 
 // No. 17, "Chihayaburu", is the card the whole sequence follows.
 export const HERO_POEM_NUMBER = 17;
+
+// The upper verse of No. 17 as printed on the reader's card, one line per column
+export const HERO_READING_LINES = ['ちはやぶる', '神代もきかず', '竜田川'];

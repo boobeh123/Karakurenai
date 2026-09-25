@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="90 120 330 545">
+  <!-- The reader (Claude), kneeling in seiza and reading the card, in profile facing right.
+       Drawn for three's SVGLoader: flat fills and strokes only. The floor point under the
+       figure is (255, 660). -->
+
+  <!-- Hakama -->
+  <path fill="#2f3654" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M150,405 C135,440 118,500 108,560 C100,610 98,640 100,655 L395,660 C412,655 416,630 408,600 C400,578 380,566 340,562 L272,556 C266,520 264,460 262,405 Z"/>
+  <path fill="#232840" d="M151,408 C136,442 119,500 109,560 C101,610 99,640 101,654 L168,656 C166,600 168,500 182,408 Z"/>
+  <path fill="#232840" fill-opacity="0.8" d="M272,558 C300,562 340,566 380,572 C400,580 408,598 408,612 C380,600 320,592 272,590 Z"/>
+  <path fill="none" stroke="#3b2418" stroke-width="1.4" stroke-linecap="round" d="M195,470 L190,655 M228,560 L226,657 M300,570 L298,659 M352,572 L354,659"/>
+
+  <!-- Haori body, the kimono at the chest, and the haori collar band -->
+  <path fill="#c8744f" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M178,298 C165,330 150,380 142,440 C138,480 136,510 135,528 C170,536 220,536 256,527 C258,480 256,420 252,360 C250,330 244,310 236,300 Z"/>
+  <path fill="#a2583c" d="M179,300 C166,332 151,380 143,440 C139,480 137,510 136,527 L162,530 C162,470 166,380 188,302 Z"/>
+  <path fill="#f7f2e8" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M236,300 L250,300 C262,330 266,370 264,405 L256,405 C254,360 248,325 236,300 Z"/>
+  <path fill="#b5623f" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M198,292 C214,298 230,300 240,304 C248,330 254,370 257,412 L249,412 C245,372 239,336 231,312 C219,306 207,303 196,300 Z"/>
+
+  <!-- Neck and face -->
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M205,240 C203,262 201,285 200,302 L240,305 C240,290 240,272 242,258 Z"/>
+  <path fill="#e6bca4" d="M206,244 C214,254 226,262 241,262 C240,272 240,282 240,290 C226,282 212,270 205,258 Z"/>
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M205,168 C222,150 248,152 257,176 C259,184 259,190 257,196 C258,201 259,204 262,210 C265,214 268,218 266,221 C264,223 261,223 259,224 C261,227 262,229 261,231 C259,233 258,234 259,236 C261,238 261,240 258,242 C256,244 257,248 258,252 C257,257 252,261 244,261 C230,258 214,250 205,240 C200,225 200,190 205,168 Z"/>
+  <path fill="#e6bca4" d="M206,236 C216,246 230,254 244,258 C236,260 222,256 212,250 Z"/>
+
+  <!-- Eye lowered toward the card, brow, mouth -->
+  <path fill="none" stroke="#2a1c1f" stroke-width="3" stroke-linecap="round" d="M238,196 C243,192 250,192 256,196"/>
+  <path fill="none" stroke="#2a1c1f" stroke-width="2" stroke-linecap="round" d="M239,196 L234,193"/>
+  <path fill="#5e1520" d="M246,196 C245,200 246,203 249,204 C252,203 253,199 252,196 Z"/>
+  <circle cx="248.3" cy="198" r="0.9" fill="#ffffff"/>
+  <path fill="none" stroke="#3a2a2a" stroke-width="1.6" stroke-linecap="round" d="M238,185 C244,182 250,182 256,185"/>
+  <path fill="none" stroke="#b86a5a" stroke-width="1.2" stroke-linecap="round" d="M258,233 L254,233"/>
+
+  <!-- Hair, with the jagged sheen band and loose strands -->
+  <path fill="#2a2025" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M203,252 L193,264 L196,247 L184,256 L187,240 C179,226 177,206 180,184 C183,150 206,126 235,127 C258,128 273,145 272,165 C272,176 268,184 263,190 L258,182 L255,197 L249,181 L244,192 L239,177 L232,189 L228,172 C221,177 216,187 214,198 C214,207 217,216 216,226 L220,244 L210,236 C208,244 206,248 203,252 Z"/>
+  <path fill="#5a4d60" d="M194,153 C208,140 232,136 256,143 L250,149 L244,145 L238,151 L231,146 L224,153 L216,148 L208,156 L201,151 Z"/>
+  <path fill="#1c1519" d="M228,172 C221,177 216,187 214,198 C214,207 217,216 216,226 L220,244 L210,236 C207,220 210,190 228,172 Z"/>
+  <path fill="none" stroke="#54485a" stroke-width="1.4" stroke-linecap="round" d="M200,170 C194,190 192,215 196,240 M214,140 C204,152 198,166 196,182 M250,160 C246,168 244,176 244,186"/>
+  <path fill="none" stroke="#e39a8e" stroke-width="1.3" stroke-linecap="round" d="M236,214 L239,210 M240,215 L243,211 M244,216 L247,212"/>
+
+  <!-- Near sleeve (tamoto), its shading and fold, and the kimono cuff -->
+  <path fill="#c8744f" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M195,300 C215,300 228,330 230,370 C250,380 285,380 312,372 C318,392 316,415 310,430 C308,460 305,490 300,510 C260,518 210,516 178,508 C172,470 175,400 180,340 C182,320 188,305 195,300 Z"/>
+  <path fill="#a2583c" d="M180,342 C178,400 174,460 179,506 C196,512 214,514 233,513 C238,470 239,420 231,376 C214,368 196,356 180,342 Z"/>
+  <path fill="#a2583c" fill-opacity="0.7" d="M300,509 C304,486 307,458 309,434 C300,450 294,480 292,511 Z"/>
+  <path fill="none" stroke="#3b2418" stroke-width="1.4" stroke-linecap="round" d="M232,374 C241,420 239,470 233,512"/>
+  <path fill="#f7f2e8" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M306,372 C314,370 320,378 320,392 C318,402 312,408 306,410 Z"/>
+
+  <!-- The reading card, held in both hands -->
+  <path fill="#f8f2e2" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M322,306 L368,300 L380,398 L334,404 Z"/>
+  <path fill="none" stroke="#3b2418" stroke-width="1.6" stroke-opacity="0.7" stroke-linecap="round" d="M358,312 L366,382 M349,314 L356,370 M340,318 L346,352"/>
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M314,390 C320,381 332,378 344,381 C354,384 360,391 360,398 C359,404 354,408 346,409 C336,410 326,408 320,403 C316,399 314,395 314,390 Z"/>
+  <path fill="#e6bca4" d="M318,399 C326,405 338,408 348,407 C354,406 358,402 359,398 C356,406 348,410 340,410 C330,410 322,406 318,399 Z"/>
+  <path fill="none" stroke="#3b2418" stroke-width="1.4" stroke-linecap="round" d="M343,397 C348,398 353,396 357,393 M339,402 C345,404 351,403 356,400"/>
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M344,384 C347,375 353,368 359,364 C364,365 364,372 359,381 C356,385 350,387 344,384 Z"/>
+  <path fill="none" stroke="#c98f7c" stroke-width="1.2" d="M358,367 C360,367 361,369 360,371"/>
+  <path fill="#f6dfcc" stroke="#3b2418" stroke-width="2.2" stroke-linejoin="round" d="M323,322 C317,326 316,336 320,342 L326,340 Z"/>
+</svg>
