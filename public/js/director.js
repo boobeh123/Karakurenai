@@ -14,7 +14,8 @@ const MAX_FOV_STRETCH = 2.2;
 const SWEEP = {
   smearStart: 0.25,
   contact: 0.34,
-  impactEnd: 0.39,
+  // Held for two frames of 24 fps film, as a drawn impact frame would be
+  impactEnd: 0.34 + 2 / 24,
   shakeEnd: 0.64,
   skidEnd: 0.6,
   speedLinesEnd: 1.4,
