@@ -1,6 +1,6 @@
 // All sound is synthesized in the browser with the Web Audio API; there are no audio files.
 // Music: sparse koto-like plucks in the miyako-bushi scale over a soft drone.
-// Ambience: faint room air and bell crickets (suzumushi), a sound of Japanese autumn.
+// Ambience: faint room air and higurashi, the evening cicadas of late summer.
 
 // Semitone steps of the miyako-bushi (in) scale
 const MIYAKO_BUSHI_STEPS = [0, 1, 5, 7, 8];
@@ -20,13 +20,16 @@ const PLUCK_SECONDS = 2.8;
 const PLUCK_RING_SECONDS = 2.4; // time for a pluck to fall by 60 dB
 const REVERB_SECONDS = 2.8;
 
-const LEVELS = { master: 1, reverb: 0.35, drone: 0.045, air: 0.02, cricket: 0.012 };
+const LEVELS = { master: 1, reverb: 0.35, drone: 0.045, air: 0.02, cicada: 0.014 };
 const CUE_LEVELS = { breath: 0.05, bell: 0.08, slap: 0.5, whoosh: 0.12 };
 const FADE_IN_SECONDS = 2;
 const FADE_OUT_SECONDS = 0.35;
-// The music falls silent before the first syllable, then returns
+// The music falls silent before the first syllable. When it returns, a phrase re-enters on cue
+// with a sweep up the strings, just after a short fade-in, so every loop audibly breathes back in.
 const MUSIC_DUCK_SECONDS = 1.2;
-const MUSIC_RETURN_SECONDS = 2.5;
+const MUSIC_RETURN_SECONDS = 0.4;
+const MUSIC_REENTRY_DELAY = 0.3;
+const REENTRY_MIDI = 74; // D5: the re-entry sweep climbs Eb4, G4, A4, Bb4 into it
 // Partials of a small struck bowl bell (rin), as multiples of its fundamental
 const BELL_PARTIALS = [1, 2.76, 5.4, 8.93];
 const BELL_FREQUENCY = 660;
@@ -147,7 +150,8 @@ export function createSoundscape() {
   let running = false;
   let melodyPosition = SCALE_NOTES.indexOf(ROOT_MIDI);
   let nextPhraseTime = 0;
-  let nextCricketTime = 0;
+  let nextCicadaTime = 0;
+  let opensWithSweep = false;
   let schedulerTimer = null;
   let suspendTimer = null;
   let noiseBuffer = null;
@@ -257,33 +261,47 @@ export function createSoundscape() {
     source.start(time);
   }
 
-  // Bell cricket: a high "riiin", a pure tone pulsed quickly by a trill
-  function playCricket(time) {
-    const duration = 0.3 + Math.random() * 0.5;
+  // Higurashi, the evening cicada: a "kana-kana-kana" of short pulses that each dip in pitch,
+  // while the whole call swells, then sinks and fades
+  function playCicada(time) {
+    const pulses = 10 + Math.floor(Math.random() * 7);
+    const pulseSeconds = 0.155 + Math.random() * 0.03;
+    const duration = pulses * pulseSeconds;
+    const startFrequency = 4300 + Math.random() * 500;
+
     const tone = context.createOscillator();
-    tone.frequency.value = 4200 + Math.random() * 500;
-    const trill = context.createOscillator();
-    trill.type = 'triangle';
-    trill.frequency.value = 36 + Math.random() * 12;
-    const trillDepth = context.createGain();
-    trillDepth.gain.value = 0.5;
-    const pulse = context.createGain();
-    pulse.gain.value = 0.5;
+    // A fast wobble in loudness gives the call its rasp
+    const rasp = context.createOscillator();
+    rasp.type = 'triangle';
+    rasp.frequency.value = 170 + Math.random() * 40;
+    const raspDepth = context.createGain();
+    raspDepth.gain.value = 0.45;
+    const texture = context.createGain();
+    texture.gain.value = 0.55;
+    rasp.connect(raspDepth).connect(texture.gain);
+
     const envelope = context.createGain();
     envelope.gain.setValueAtTime(0, time);
-    envelope.gain.linearRampToValueAtTime(LEVELS.cricket, time + 0.04);
-    envelope.gain.setValueAtTime(LEVELS.cricket, time + duration - 0.1);
-    envelope.gain.linearRampToValueAtTime(0, time + duration);
-    const panner = context.createStereoPanner();
-    panner.pan.value = Math.random() * 1.6 - 0.8;
+    Array.from({ length: pulses }).forEach((_, index) => {
+      const start = time + index * pulseSeconds;
+      const swell = Math.min(1, (index + 1) / 3) * (1 - index / pulses) ** 0.7;
+      const pitch = startFrequency * (1 - 0.12 * (index / pulses));
+      tone.frequency.setValueAtTime(pitch, start);
+      tone.frequency.exponentialRampToValueAtTime(pitch * 0.9, start + pulseSeconds * 0.8);
+      envelope.gain.setValueAtTime(0, start);
+      envelope.gain.linearRampToValueAtTime(LEVELS.cicada * swell, start + 0.012);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, start + pulseSeconds * 0.8);
+    });
 
-    trill.connect(trillDepth).connect(pulse.gain);
-    tone.connect(pulse).connect(envelope).connect(panner);
-    connectToMix(panner, 0.8);
+    // Somewhere outside the window, to one side
+    const panner = context.createStereoPanner();
+    panner.pan.value = Math.random() * 1.4 - 0.7;
+    tone.connect(texture).connect(envelope).connect(panner);
+    connectToMix(panner, 0.9);
     tone.start(time);
-    trill.start(time);
+    rasp.start(time);
     tone.stop(time + duration + 0.05);
-    trill.stop(time + duration + 0.05);
+    rasp.stop(time + duration + 0.05);
   }
 
   // An in-breath before the reader speaks: soft noise rising in pitch
@@ -392,8 +410,10 @@ export function createSoundscape() {
     const notes = [];
     let offset = 0;
 
-    // Sometimes open with a sararin: a quick sweep up the strings into the first note
-    if (Math.random() < 0.25) {
+    // Sometimes open with a sararin: a quick sweep up the strings into the first note.
+    // The phrase that re-enters after the silence always does.
+    if (opensWithSweep || Math.random() < 0.25) {
+      opensWithSweep = false;
       const sweepStart = Math.max(0, melodyPosition - 4);
       SCALE_NOTES.slice(sweepStart, melodyPosition + 1).forEach((midi, index) => {
         notes.push({ midi, offset: index * SWEEP_NOTE_SECONDS, velocity: 0.12 + index * 0.03, bend: false });
@@ -434,20 +454,24 @@ export function createSoundscape() {
     return { notes, duration: offset + rest };
   }
 
-  // Schedules whole phrases and cricket calls slightly ahead of the audio clock.
+  // Schedules whole phrases and cicada calls slightly ahead of the audio clock.
   // While the context is suspended its clock stops, so nothing piles up.
   function runScheduler() {
     const horizon = context.currentTime + SCHEDULE_AHEAD_SECONDS;
 
+    // While the music is ducked the koto rests; its next phrase waits for the return
+    if (isMusicDucked) {
+      nextPhraseTime = Math.max(nextPhraseTime, horizon);
+    }
     while (nextPhraseTime < horizon) {
       const phrase = composePhrase();
       phrase.notes.forEach((note) => playPluck(note, nextPhraseTime + note.offset));
       nextPhraseTime += phrase.duration;
     }
 
-    while (nextCricketTime < horizon) {
-      playCricket(nextCricketTime);
-      nextCricketTime += 1.2 + Math.random() * 4.5;
+    while (nextCicadaTime < horizon) {
+      playCicada(nextCicadaTime);
+      nextCicadaTime += 5 + Math.random() * 9;
     }
   }
 
@@ -488,7 +512,7 @@ export function createSoundscape() {
     startDrone();
     startAir();
     nextPhraseTime = context.currentTime + 0.8;
-    nextCricketTime = context.currentTime + 3;
+    nextCicadaTime = context.currentTime + 2;
   }
 
   async function suspendAfterFade() {
@@ -543,6 +567,13 @@ export function createSoundscape() {
     const level = value ? 0 : 1;
     const seconds = value ? MUSIC_DUCK_SECONDS : MUSIC_RETURN_SECONDS;
     [musicBus.dry.gain, musicBus.wet.gain].forEach((param) => rampTo(param, level, seconds));
+
+    // Re-enter on cue: the next phrase starts almost at once, sweeping up into D5
+    if (!value) {
+      nextPhraseTime = context.currentTime + MUSIC_REENTRY_DELAY;
+      melodyPosition = SCALE_NOTES.indexOf(REENTRY_MIDI);
+      opensWithSweep = true;
+    }
   }
 
   // One-shot sound effects, fired as the sequence passes them
