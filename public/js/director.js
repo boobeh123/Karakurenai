@@ -1,7 +1,21 @@
 import * as THREE from 'three';
 
-// One pass through the sequence, in seconds. Feature 3 extends it with the river shots.
-export const LOOP_SECONDS = 11;
+// One pass through the sequence, in seconds: the match in the hall, then the Tatsuta River
+export const LOOP_SECONDS = 24;
+// With reduced motion the page opens paused here: the river, with the poem showing
+export const STILL_FRAME_TIME = 17.5;
+
+// The river: the card falls from the sky, lands, and the crimson spreads for ten seconds
+const RIVER = {
+  fallStart: 11,
+  landing: 12,
+  rippleEnd: 13.6,
+  dyeEnd: 23.5,
+  poemStart: 15.5,
+  poemEnd: 23,
+};
+// The loop ends by fading to paper, and the hall fades back in from it
+const FADE = { outStart: 23, inEnd: 0.5 };
 
 // Object motion steps at 12 fps ("on twos"), like hand-drawn animation; the camera stays smooth
 const TWOS_FPS = 12;
@@ -85,11 +99,13 @@ export function fitFieldOfView(fov, aspect) {
 /**************************************************************
 Director
 ***************************************************************/
-// Shots are placed relative to the hero card and the reader, so the camera follows the
-// layout in karutaHall.js
-export function createDirector({ heroPosition, readerPosition }) {
+// Hall shots are placed relative to the hero card and the reader, and river shots follow the
+// card as the current carries it, so the camera tracks the layouts in karutaHall.js and
+// tatsutaRiver.js
+export function createDirector({ heroPosition, readerPosition, riverCardAfter }) {
   const near = (base, x, y, z) => base.clone().add(new THREE.Vector3(x, y, z));
   const hero = heroPosition;
+  const floatingCard = (time) => riverCardAfter(time - RIVER.landing);
 
   const shots = [
     {
@@ -127,9 +143,36 @@ export function createDirector({ heroPosition, readerPosition }) {
       // Facing the player's side as the card is swept toward the lens
       name: 'sweep',
       start: 9,
-      end: LOOP_SECONDS,
+      end: RIVER.fallStart,
       from: pose(near(hero, 2, 14, 35), near(hero, 0, 5, -1), 34),
       to: pose(near(hero, 1, 12, 31), near(hero, 0, 5, -1), 34),
+    },
+    {
+      // Hard cut on the spinning card: it falls from the sky onto the Tatsuta River
+      name: 'landing',
+      world: 'river',
+      start: RIVER.fallStart,
+      end: 15,
+      from: pose(new THREE.Vector3(-45, 115, 125), new THREE.Vector3(0, 10, 0), 40),
+      to: pose(new THREE.Vector3(-35, 95, 105), new THREE.Vector3(3, 0, 0), 38),
+    },
+    {
+      // Drifting after the card as the crimson spreads, leaving room for the poem on the left
+      name: 'river',
+      world: 'river',
+      start: 15,
+      end: 20,
+      from: pose(near(floatingCard(15), -15, 65, 105), near(floatingCard(15), -12, 0, 0), 36),
+      to: pose(near(floatingCard(20), -5, 55, 95), near(floatingCard(20), -12, 0, 0), 34),
+    },
+    {
+      // Rising from the dyed water through the falling leaves to the maples on the far bank
+      name: 'rise',
+      world: 'river',
+      start: 20,
+      end: LOOP_SECONDS,
+      from: pose(near(floatingCard(20), -5, 35, 80), floatingCard(20), 36),
+      to: pose(near(floatingCard(24), -20, 45, 110), new THREE.Vector3(20, 110, -300), 42),
     },
   ];
 
@@ -144,6 +187,7 @@ export function createDirector({ heroPosition, readerPosition }) {
     { name: 'bell', time: syllableStart + 0.1 },
     { name: 'slap', time: sweepStart + SWEEP.contact },
     { name: 'whoosh', time: sweepStart + SWEEP.contact + 0.02 },
+    { name: 'splash', time: RIVER.landing },
   ];
 
   const camera = pose(new THREE.Vector3(), new THREE.Vector3(), 35);
@@ -190,7 +234,17 @@ export function createDirector({ heroPosition, readerPosition }) {
       sparkle: getProgress(drawnSweepTime, SWEEP.sparkleStart, SWEEP.sparkleEnd),
       ring: getProgress(drawnTime, syllableStart + 0.1, syllableStart + 1.5),
       syllable: time >= syllableStart + 0.1 && time < syllableStart + 1.4,
-      musicDucked: time >= 4.4,
+      // Silent from the breath until the card reaches the river
+      musicDucked: time >= 4.4 && time < RIVER.fallStart,
+      cardFall: getProgress(drawnTime, RIVER.fallStart, RIVER.landing),
+      floatSeconds: drawnTime - RIVER.landing,
+      ripple: drawnTime >= RIVER.landing ? getProgress(drawnTime, RIVER.landing, RIVER.rippleEnd) : 0,
+      // Spreads at a steady pace, so the river shot sees a plume in blue water before the
+      // crimson fills the view
+      dye: getProgress(drawnTime, RIVER.landing, RIVER.dyeEnd),
+      poem: time >= RIVER.poemStart && time < RIVER.poemEnd,
+      water: shot.world === 'river' && time < FADE.outStart,
+      fade: Math.max(getProgress(time, FADE.outStart, LOOP_SECONDS), 1 - getProgress(time, 0, FADE.inEnd)),
       breathWisps: time >= breathShot.start + BREATH_WISPS_DELAY,
       eyes: getEyesDrawing(drawnTime - eyesStart),
       glint: drawnTime - eyesStart >= EYES.glint,
@@ -199,7 +253,7 @@ export function createDirector({ heroPosition, readerPosition }) {
       handAlong: Math.min(1, getProgress(sweepTime, SWEEP.smearStart, SWEEP.contact) * 1.2),
     };
 
-    return { shot, insert, camera, fx, drawnTime };
+    return { shot, world: shot.world ?? 'hall', insert, camera, fx, drawnTime };
   }
 
   // Names of cues passed between two times; the second time may have wrapped past the loop end

@@ -20,8 +20,11 @@ const PLUCK_SECONDS = 2.8;
 const PLUCK_RING_SECONDS = 2.4; // time for a pluck to fall by 60 dB
 const REVERB_SECONDS = 2.8;
 
-const LEVELS = { master: 1, reverb: 0.35, drone: 0.045, air: 0.02, cicada: 0.014 };
-const CUE_LEVELS = { breath: 0.05, bell: 0.08, slap: 0.5, whoosh: 0.12 };
+const LEVELS = { master: 1, reverb: 0.35, drone: 0.045, air: 0.02, cicada: 0.014, water: 0.05 };
+const CUE_LEVELS = { breath: 0.05, bell: 0.08, slap: 0.5, whoosh: 0.12, splash: 0.14 };
+// The river bed swells in with the water shots and settles out as the loop fades
+const WATER_IN_SECONDS = 1.5;
+const WATER_OUT_SECONDS = 1;
 const FADE_IN_SECONDS = 2;
 const FADE_OUT_SECONDS = 0.35;
 // The music falls silent before the first syllable. When it returns, a phrase re-enters on cue
@@ -158,6 +161,8 @@ export function createSoundscape() {
   // Music runs through its own dry and reverb buses so it can fall silent under the scene
   let musicBus = null;
   let isMusicDucked = false;
+  let waterLevel = null;
+  let isWaterOn = false;
 
   // Every voice goes to a bus dry, plus a share to that bus's reverb
   function connectToMix(node, reverbSend, bus = { dry: master, wet: reverb }) {
@@ -236,6 +241,33 @@ export function createSoundscape() {
     level.gain.value = LEVELS.air;
     source.connect(lowpass).connect(level).connect(master);
     source.start();
+  }
+
+  // Running water: noise through a band-pass whose centre wanders slowly, like a stream
+  // babbling over stones. Silent until the scene reaches the river.
+  function startWater() {
+    const source = context.createBufferSource();
+    source.buffer = noiseBuffer;
+    source.loop = true;
+    const band = context.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 650;
+    band.Q.value = 0.6;
+    const babble = context.createOscillator();
+    babble.frequency.value = 0.13;
+    const babbleDepth = context.createGain();
+    babbleDepth.gain.value = 220;
+    babble.connect(babbleDepth).connect(band.frequency);
+    const lowpass = context.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 1800;
+    waterLevel = context.createGain();
+    waterLevel.gain.value = isWaterOn ? LEVELS.water : 0;
+
+    source.connect(band).connect(lowpass).connect(waterLevel);
+    connectToMix(waterLevel, 0.3);
+    source.start();
+    babble.start();
   }
 
   function playPluck({ midi, velocity, bend }, time) {
@@ -390,7 +422,33 @@ export function createSoundscape() {
     connectToMix(panner, 0.6);
   }
 
-  const cuePlayers = { breath: playBreath, bell: playBell, slap: playSlap, whoosh: playWhoosh };
+  // The card meeting the water: a soft burst of spray and a small low plop
+  function playSplash(time) {
+    const splash = context.createGain();
+
+    const spray = createNoiseVoice(time, 0.3);
+    spray.filter.type = 'bandpass';
+    spray.filter.frequency.value = 1400;
+    spray.filter.Q.value = 1.1;
+    spray.envelope.gain.linearRampToValueAtTime(CUE_LEVELS.splash, time + 0.005);
+    spray.envelope.gain.exponentialRampToValueAtTime(0.0001, time + 0.26);
+    spray.envelope.connect(splash);
+
+    const plop = context.createOscillator();
+    plop.frequency.setValueAtTime(320, time);
+    plop.frequency.exponentialRampToValueAtTime(110, time + 0.12);
+    const plopEnvelope = context.createGain();
+    plopEnvelope.gain.setValueAtTime(0, time);
+    plopEnvelope.gain.linearRampToValueAtTime(CUE_LEVELS.splash * 0.6, time + 0.004);
+    plopEnvelope.gain.exponentialRampToValueAtTime(0.0001, time + 0.15);
+    plop.connect(plopEnvelope).connect(splash);
+    plop.start(time);
+    plop.stop(time + 0.16);
+
+    connectToMix(splash, 0.6);
+  }
+
+  const cuePlayers = { breath: playBreath, bell: playBell, slap: playSlap, whoosh: playWhoosh, splash: playSplash };
 
   function stepMelody(position) {
     const move = pick(MELODY_MOVES);
@@ -511,6 +569,7 @@ export function createSoundscape() {
     pluckBuffers = new Map(SCALE_NOTES.map((midi) => [midi, renderPluck(context, midiToFrequency(midi))]));
     startDrone();
     startAir();
+    startWater();
     nextPhraseTime = context.currentTime + 0.8;
     nextCicadaTime = context.currentTime + 2;
   }
@@ -576,6 +635,14 @@ export function createSoundscape() {
     }
   }
 
+  // Called every frame by the scene; only a change of state starts a fade
+  function setWater(value) {
+    if (value === isWaterOn) return;
+    isWaterOn = value;
+    if (!context) return;
+    rampTo(waterLevel.gain, value ? LEVELS.water : 0, value ? WATER_IN_SECONDS : WATER_OUT_SECONDS);
+  }
+
   // One-shot sound effects, fired as the sequence passes them
   function playCue(name) {
     if (!context || !enabled || !running || context.state !== 'running') return;
@@ -588,6 +655,7 @@ export function createSoundscape() {
     setEnabled,
     setRunning,
     setMusicDucked,
+    setWater,
     playCue,
   };
 }

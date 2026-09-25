@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { createInsertShots } from './celArt.js';
-import { createDirector, fitFieldOfView, LOOP_SECONDS } from './director.js';
+import { createDirector, fitFieldOfView, LOOP_SECONDS, STILL_FRAME_TIME } from './director.js';
 import { createKarutaHall } from './karutaHall.js';
 import { createPostPass } from './postPass.js';
 import { createSoundscape } from './soundscape.js';
+import { createTatsutaRiver } from './tatsutaRiver.js';
 
 /**************************************************************
 DOM selectors
@@ -11,6 +12,7 @@ DOM selectors
 const sceneCanvas = document.querySelector('.sceneCanvas');
 const sceneError = document.querySelector('.sceneError');
 const syllableCue = document.querySelector('.syllableCue');
+const poemCard = document.querySelector('.poemCard');
 const motionToggle = document.querySelector('.motionToggle');
 const motionToggleLabel = document.querySelector('.motionToggleLabel');
 const soundToggle = document.querySelector('.soundToggle');
@@ -25,6 +27,7 @@ let renderer = null;
 let scene = null;
 let camera = null;
 let hall = null;
+let river = null;
 let inserts = null;
 let director = null;
 let postPass = null;
@@ -104,6 +107,7 @@ function getPointScale() {
 function updateEffects({ fx }) {
   const { uniforms } = postPass;
   uniforms.impact.value = fx.impact;
+  uniforms.fade.value = fx.fade;
   uniforms.speedLines.value = fx.speedLines;
   if (fx.speedLines > 0) {
     // Lines radiate from wherever the flying card is on screen
@@ -111,10 +115,12 @@ function updateEffects({ fx }) {
     uniforms.speedCenter.value.set(speedCenter.x * 0.5 + 0.5, speedCenter.y * 0.5 + 0.5);
   }
   syllableCue.classList.toggle('isVisible', fx.syllable);
+  poemCard.classList.toggle('isVisible', fx.poem);
 }
 
 function updateSound({ fx }, loopTime) {
   soundscape.setMusicDucked(fx.musicDucked);
+  soundscape.setWater(fx.water);
   director.getCues(previousLoopTime, loopTime).forEach((cue) => soundscape.playCue(cue));
 }
 
@@ -129,17 +135,28 @@ function renderFrame() {
   if (!frame.insert) {
     updateCamera(frame);
   }
-  hall.update({
-    time: sceneTime,
-    drawnTime: frame.drawnTime,
-    fx: frame.fx,
-    pointScale: getPointScale(),
-    cameraPosition: camera.position,
-  });
+  if (frame.world === 'river') {
+    river.update({ drawnTime: frame.drawnTime, fx: frame.fx });
+  } else {
+    hall.update({
+      time: sceneTime,
+      drawnTime: frame.drawnTime,
+      fx: frame.fx,
+      pointScale: getPointScale(),
+      cameraPosition: camera.position,
+    });
+  }
   updateEffects(frame);
   updateSound(frame, loopTime);
   previousLoopTime = loopTime;
-  postPass.render(sceneTime, frame.insert ? inserts.getView(frame, camera.aspect) : undefined);
+  postPass.render(sceneTime, getView(frame));
+}
+
+// What the post pass draws this frame: an insert drawing, the river, or (by default) the hall
+function getView(frame) {
+  if (frame.insert) return inserts.getView(frame, camera.aspect);
+  if (frame.world === 'river') return { scene: river.scene, camera, ink: true };
+  return undefined;
 }
 
 function animate(now) {
@@ -241,11 +258,21 @@ async function init() {
     camera = new THREE.PerspectiveCamera(35, 1, 1, 2000);
     const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
     hall = await createKarutaHall({ maxAnisotropy });
+    river = createTatsutaRiver({ heroCard: hall.heroCard });
     inserts = await createInsertShots({ maxAnisotropy });
     scene.add(hall.group);
     scene.background = hall.background;
-    director = createDirector({ heroPosition: hall.heroRestPosition, readerPosition: hall.readerPosition });
+    director = createDirector({
+      heroPosition: hall.heroRestPosition,
+      readerPosition: hall.readerPosition,
+      riverCardAfter: river.getCardPositionAfter,
+    });
     postPass = createPostPass(renderer, scene, camera);
+
+    // Reduced motion opens paused on the river with the poem showing
+    if (reducedMotionQuery.matches) {
+      sceneTime = STILL_FRAME_TIME;
+    }
     const requestedStartTime = getRequestedStartTime();
     if (requestedStartTime !== null) {
       sceneTime = requestedStartTime;

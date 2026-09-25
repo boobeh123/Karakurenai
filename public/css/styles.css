@@ -15,6 +15,7 @@ Base
 
   --fontSizeSm: 0.8rem;
   --fontSizeMd: 0.95rem;
+  --fontSizePoem: clamp(1.3rem, 2.6vw, 2rem);
 
   --spaceXs: 0.35rem;
   --spaceSm: 0.5rem;
@@ -159,6 +160,60 @@ Overlays
   transform: translate(-50%, -50%) scale(1);
 }
 
+/* The full poem over the river: the Japanese in vertical columns, the translation beside it.
+   It stays in the page for screen readers and only fades in visually. */
+.poemCard {
+  position: absolute;
+  top: 50%;
+  left: var(--spaceLg);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spaceLg);
+  max-width: min(34rem, calc(100% - var(--spaceMd) * 2));
+  margin: 0;
+  padding: var(--spaceLg);
+  color: var(--colorInk);
+  background-color: var(--colorCreamVeil);
+  border-radius: var(--radiusCard);
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 1.2s ease;
+  pointer-events: none;
+}
+
+.poemCard.isVisible {
+  opacity: 1;
+}
+
+.poemText {
+  margin: 0;
+}
+
+.poemText p {
+  margin: 0;
+  font-family: var(--fontBrush);
+  font-size: var(--fontSizePoem);
+  line-height: 1.5;
+  writing-mode: vertical-rl;
+}
+
+.poemCaption {
+  max-width: 15rem;
+  font-size: var(--fontSizeSm);
+}
+
+.poemCaption p {
+  margin: 0 0 var(--spaceSm);
+}
+
+.poemRomaji {
+  font-style: italic;
+}
+
+.poemAuthor {
+  font-weight: 600;
+}
+
 /**************************************************************
 Footer
 ***************************************************************/
@@ -186,6 +241,21 @@ Media queries
 @media (max-width: 56em) {
   .siteCredit {
     border-radius: var(--radiusCard);
+  }
+}
+
+/* Phones: the poem sits under the scene controls instead of centred on the left */
+@media (max-width: 40em) {
+  .poemCard {
+    top: 4.5rem;
+    left: var(--spaceMd);
+    gap: var(--spaceMd);
+    padding: var(--spaceMd);
+    transform: none;
+  }
+
+  .poemCaption {
+    max-width: 11rem;
   }
 }
 

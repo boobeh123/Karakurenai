@@ -43,6 +43,7 @@ const fragmentShader = /* glsl */ `
   uniform float impact;
   uniform float speedLines;
   uniform vec2 speedCenter;
+  uniform float fade;
 
   varying vec2 vUv;
 
@@ -102,6 +103,9 @@ const fragmentShader = /* glsl */ `
     vec2 centered = (vUv - 0.5) * vec2(resolution.x / resolution.y, 1.0);
     color *= 1.0 - vignetteAmount * smoothstep(0.35, 1.0, length(centered));
 
+    // A slow fade through paper joins the end of the loop to its start
+    color = mix(color, paperColor, fade);
+
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
 
@@ -142,6 +146,7 @@ export function createPostPass(renderer, scene, camera) {
     impact: { value: 0 },
     speedLines: { value: 0 },
     speedCenter: { value: new THREE.Vector2(0.5, 0.5) },
+    fade: { value: 0 },
   };
 
   const compositeMaterial = new THREE.ShaderMaterial({
